@@ -10,13 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 
 import { MediaCover } from "./media-cover";
-import { type ContinueReadingItem } from "./mock-data";
+import { type MediaProgressItem } from "./mock-data";
 
-type ContinueReadingCardProps = {
-  item: ContinueReadingItem;
+type MediaProgressCardProps = {
+  item: MediaProgressItem;
 };
 
-export function ContinueReadingCard({ item }: ContinueReadingCardProps) {
+export function MediaProgressCard({ item }: MediaProgressCardProps) {
   return (
     <Card
       className={cn(
@@ -25,39 +25,37 @@ export function ContinueReadingCard({ item }: ContinueReadingCardProps) {
         "hover:-translate-y-1 hover:shadow-lg hover:ring-foreground/12",
       )}
     >
-      <CardContent className="flex gap-4 pt-0">
-        <div className="relative shrink-0 overflow-hidden rounded-xl">
+      <CardContent className="space-y-4 pt-0">
+        <div className="overflow-hidden rounded-xl">
           <MediaCover
             title={item.title}
-            variant="compact"
             className={cn(
-              "w-24 sm:w-28",
-              "transition-transform duration-500 ease-out group-hover:scale-105",
+              "aspect-[4/3] w-full rounded-xl",
+              "transition-transform duration-500 ease-out group-hover:scale-[1.02]",
               item.coverClassName,
             )}
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Badge variant="secondary" className="capitalize">
-                {item.type}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {item.lastOpened}
-              </span>
-            </div>
-            <CardTitle className="text-base leading-snug transition-colors duration-300 group-hover:text-foreground">
-              {item.title}
-            </CardTitle>
-            <CardDescription>{item.subtitle}</CardDescription>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <Badge variant="secondary">{item.categoryLabel}</Badge>
+            <span className="text-xs text-muted-foreground">
+              {item.lastOpened}
+            </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-1">
+            <CardTitle className="text-base leading-snug">{item.title}</CardTitle>
+            <CardDescription>{item.creator}</CardDescription>
+          </div>
+
+          <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Progress</span>
-              <span className="font-medium text-foreground">{item.progress}%</span>
+              <span className="font-medium text-foreground">
+                {item.progress}%
+              </span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div
@@ -65,16 +63,22 @@ export function ContinueReadingCard({ item }: ContinueReadingCardProps) {
                 style={{ width: `${item.progress}%` }}
               />
             </div>
-            <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 -translate-x-1">
-              Continue
-              <ArrowRight
-                className="size-3 transition-transform duration-300 group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 -translate-x-1">
+            Continue
+            <ArrowRight
+              className="size-3 transition-transform duration-300 group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+/** @deprecated Use MediaProgressCard — filename kept for compatibility */
+export function ContinueReadingCard({ item }: MediaProgressCardProps) {
+  return <MediaProgressCard item={item} />;
 }
