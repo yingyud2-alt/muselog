@@ -1,47 +1,44 @@
 import { Sparkles } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
-
-function formatToday() {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date());
-}
+import {
+  formatDisplayWeekday,
+  getDisplayGreeting,
+} from "@/lib/display-date";
 
 export function HeroSection() {
   return (
-    <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-muted/70 via-card to-muted/30 shadow-sm ring-1 ring-foreground/8">
-      <CardContent className="relative py-8 sm:py-10">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-foreground/5 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-12 left-1/3 size-32 rounded-full bg-foreground/3 blur-2xl"
-        />
+    <div className="relative flex h-[360px] items-center justify-center overflow-hidden text-center">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 75% 60% at 50% 38%, rgba(80,110,130,0.08) 0%, transparent 68%)",
+        }}
+      />
 
-        <div className="relative space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            <time dateTime={new Date().toISOString().split("T")[0]}>
-              {formatToday()}
-            </time>
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Good evening 👋
-            </h1>
-            <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
-              Your personal reading and media journal. Pick up where you left
-              off, or discover something new tonight.
-            </p>
-          </div>
+      <div className="relative space-y-5">
+        <div className="flex items-center justify-center gap-2 text-sm text-white/40">
+          <Sparkles size={14} />
+          {formatDisplayWeekday()}
         </div>
-      </CardContent>
-    </Card>
+
+        <h1 className="text-5xl font-semibold tracking-tight text-white">
+          {getDisplayGreeting()} 👋
+        </h1>
+
+        <p className="text-xl text-white/60">What does your mind need today?</p>
+
+        <p className="text-sm text-white/40">
+          Discover something that matches your mood.
+        </p>
+
+        <button
+          type="button"
+          className="mt-3 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm backdrop-blur transition hover:bg-white/20"
+        >
+          ✨ Surprise me
+        </button>
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,128 @@
+"use client";
+
+import { useCallback, useSyncExternalStore } from "react";
+
+import type { Memory, MemoryStatus } from "./types";
+
+const STORAGE_KEY = "muselog-memories-v2";
+
+function readMemories(): Memory[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw) as Memory[];
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeMemories(memories: Memory[]): void {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+}
+
+function subscribe(callback: () => void) {
+  window.addEventListener("muselog-memories-updated", callback);
+
+  return () => {
+    window.removeEventListener("muselog-memories-updated", callback);
+  };
+}
+
+function createMemoryId(contentId: string): string {
+  return `memory-${contentId}`;
+}
+
+export function getAllMemories(): Memory[] {
+  return readMemories();
+}
+
+export function getMemoryByContentId(contentId: string): Memory | null {
+  return readMemories().find((memory) => memory.contentId === contentId) ?? null;
+}
+
+export function upsertMemory(
+  partial: Pick<Memory, "contentId"> &
+    Partial<Omit<Memory, "contentId" | "id" | "createdAt">> & {
+      status: MemoryStatus;
+    },
+): Memory {
+  const memories = readMemories();
+  const existingIndex = memories.findIndex(
+    (memory) => memory.contentId === partial.contentId,
+  );
+  const now = new Date().toISOString();
+
+  const next: Memory = {
+    id:
+      existingIndex >= 0
+        ? memories[existingIndex].id
+        : createMemoryId(partial.contentId),
+    contentId: partial.contentId,
+    status: partial.status,
+    rating: partial.rating,
+    note: partial.note,
+    mood: partial.mood,
+    createdAt:
+      existingIndex >= 0 ? memories[existingIndex].createdAt : now,
+    updatedAt: now,
+  };
+
+  if (existingIndex >= 0) {
+    memories[existingIndex] = { ...memories[existingIndex], ...next };
+  } else {
+    memories.push(next);
+  }
+
+  writeMemories(memories);
+  window.dispatchEvent(new CustomEvent("muselog-memories-updated"));
+
+  return next;
+}
+
+export function removeMemory(contentId: string): void {
+  const memories = readMemories().filter(
+    (memory) => memory.contentId !== contentId,
+  );
+
+  writeMemories(memories);
+  window.dispatchEvent(new CustomEvent("muselog-memories-updated"));
+}
+
+export function useUserMemory(contentId: string) {
+  const memory = useSyncExternalStore(
+    subscribe,
+    () => getMemoryByContentId(contentId),
+    () => null,
+  );
+
+  const save = useCallback(
+    (
+      partial: Partial<Omit<Memory, "contentId" | "id" | "createdAt">> & {
+        status: MemoryStatus;
+      },
+    ) => upsertMemory({ contentId, ...partial }),
+    [contentId],
+  );
+
+  return { memory, save };
+}
+
+export function useAllMemories() {
+  const memories = useSyncExternalStore(
+    subscribe,
+    () => getAllMemories(),
+    () => [],
+  );
+
+  return { memories };
+}

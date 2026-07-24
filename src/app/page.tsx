@@ -1,69 +1,127 @@
 import { ActivityCalendar } from "@/components/dashboard/activity-calendar";
-import { AiPickCard } from "@/components/dashboard/ai-pick-card";
-import { MediaProgressCard } from "@/components/dashboard/continue-reading-card";
 import { HeroSection } from "@/components/dashboard/hero-section";
 import {
-  aiPicks,
-  continueExploring,
-  recentlyAdded,
+  MobileBubblePrompt,
+  MobileCompactHeader,
+  MobileInfoSection,
+} from "@/components/dashboard/mobile-home-sections";
+import MoodBubbles from "@/components/dashboard/mood-bubbles";
+import QuickLogBar from "@/components/dashboard/quick-log-bar";
+
+import {
   readingStats,
 } from "@/components/dashboard/mock-data";
-import { RecentlyAddedCard } from "@/components/dashboard/recently-added-card";
-import { SectionHeader } from "@/components/dashboard/section-header";
+
 import { StatsGrid } from "@/components/dashboard/stats-grid";
+
 
 export default function Home() {
   return (
-    <div className="flex-1 overflow-x-hidden bg-background">
-      <div className="mx-auto max-w-5xl space-y-12 px-6 py-10 sm:px-8 sm:py-12">
-        <HeroSection />
+    <main
+      className="
+      min-h-[100svh]
+      overflow-x-hidden
+      bg-[#0D1117]
+      text-white
+      md:min-h-screen
+      "
+    >
 
-        <section className="space-y-4">
-          <SectionHeader
-            title="Reading Stats"
-            description="A snapshot of your media journal"
-          />
-          <StatsGrid items={readingStats} />
-        </section>
+      <div
+        className="
+        mx-auto
+        max-w-6xl
+        px-0
+        md:px-6
+        "
+      >
 
-        <section className="space-y-4">
-          <SectionHeader
-            title="Continue Exploring"
-            description="Pick up your books, films, and albums in progress"
-          />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {continueExploring.map((item) => (
-              <MediaProgressCard key={item.title} item={item} />
-            ))}
+        <div className="flex flex-col md:contents">
+
+          {/* Desktop greeting */}
+          <div className="hidden md:block">
+            <HeroSection />
           </div>
-        </section>
 
-        <section className="space-y-4">
-          <SectionHeader
-            title="Recently Added"
-            description="Fresh entries in your library"
+          <MobileCompactHeader />
+
+          {/* Mood universe */}
+          <section className="relative shrink-0 md:-mt-10">
+            <MoodBubbles />
+          </section>
+
+          <MobileBubblePrompt />
+
+          <MobileInfoSection />
+
+          <QuickLogBar />
+
+        </div>
+
+
+
+        {/* Reading Stats — desktop only */}
+
+        <section
+          className="
+          mt-20
+          hidden
+          space-y-4
+          md:block
+          "
+        >
+
+          <h2
+            className="
+            text-xl
+            font-medium
+            "
+          >
+            Reading Stats
+          </h2>
+
+
+          <p
+            className="
+            text-sm
+            text-white/40
+            "
+          >
+            A snapshot of your media journal
+          </p>
+
+
+          <StatsGrid
+            items={readingStats}
           />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {recentlyAdded.map((item) => (
-              <RecentlyAddedCard key={item.title} item={item} />
-            ))}
-          </div>
+
+
         </section>
 
-        <ActivityCalendar />
 
-        <section className="space-y-4">
-          <SectionHeader
-            title="AI Picks for You"
-            description="Personalized suggestions based on your journal"
-          />
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {aiPicks.map((item) => (
-              <AiPickCard key={item.title} item={item} />
-            ))}
-          </div>
+
+
+        {/* Calendar */}
+
+        <section
+          className="
+          mt-20
+          px-6
+          pb-[calc(env(safe-area-inset-bottom)+24px)]
+          md:mt-20
+          md:px-0
+          md:pb-0
+          "
+        >
+
+          <ActivityCalendar />
+
         </section>
+
+
+
       </div>
-    </div>
+
+    </main>
   );
 }

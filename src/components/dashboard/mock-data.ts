@@ -5,6 +5,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { DISPLAY_REFERENCE_DATE } from "@/lib/display-date";
+
 export type MediaType = "book" | "movie" | "music";
 
 export type ActivityLevel = 0 | 1 | 2 | 3 | 4;
@@ -177,37 +179,46 @@ function countFromLevel(level: ActivityLevel, dateStr: string): number {
 }
 
 function formatDateISO(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
 
-function startOfWeek(date: Date): Date {
-  const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  result.setDate(result.getDate() - result.getDay());
+function startOfWeekUTC(date: Date): Date {
+  const result = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  result.setUTCDate(result.getUTCDate() - result.getUTCDay());
 
   return result;
 }
 
-export function generateActivityWeeks(weekCount = ACTIVITY_WEEKS): ActivityWeek[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+export function generateActivityWeeks(
+  weekCount = ACTIVITY_WEEKS,
+  referenceDate: Date = DISPLAY_REFERENCE_DATE,
+): ActivityWeek[] {
+  const today = new Date(
+    Date.UTC(
+      referenceDate.getUTCFullYear(),
+      referenceDate.getUTCMonth(),
+      referenceDate.getUTCDate(),
+    ),
+  );
 
-  const currentWeekStart = startOfWeek(today);
+  const currentWeekStart = startOfWeekUTC(today);
   const weeks: ActivityWeek[] = [];
 
   for (let weekOffset = weekCount - 1; weekOffset >= 0; weekOffset -= 1) {
     const weekStart = new Date(currentWeekStart);
-    weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
+    weekStart.setUTCDate(currentWeekStart.getUTCDate() - weekOffset * 7);
 
     const days: ActivityDay[] = [];
 
     for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
       const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + dayOffset);
+      date.setUTCDate(weekStart.getUTCDate() + dayOffset);
 
       const dateStr = formatDateISO(date);
       const isFuture = date > today;

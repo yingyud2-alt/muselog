@@ -17,9 +17,16 @@ export function StatsGrid({ items }: StatsGridProps) {
           <Card
             key={item.label}
             className={cn(
-              "group cursor-default shadow-sm ring-foreground/8",
+              "group cursor-default",
+              "bg-white/5",
+              "border-white/10",
+              "backdrop-blur-xl",
+              "shadow-lg",
+              "text-white",
               "transition-all duration-300 ease-out",
-              "hover:-translate-y-1 hover:shadow-md hover:ring-foreground/12",
+              "hover:-translate-y-1",
+              "hover:bg-white/10",
+              "hover:shadow-xl",
             )}
           >
             <CardContent className="flex items-start justify-between gap-4 pt-0">
@@ -27,21 +34,28 @@ export function StatsGrid({ items }: StatsGridProps) {
                 <p className="text-3xl font-semibold tracking-tight transition-transform duration-300 group-hover:scale-105">
                   {item.value}
                 </p>
+
                 <div>
-                  <p className="font-medium capitalize">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-medium capitalize text-white">
+                    {item.label}
+                  </p>
+
+                  <p className="text-xs text-white/50">
                     {item.description}
                   </p>
                 </div>
               </div>
+
               <div
                 className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted",
-                  "transition-colors duration-300 group-hover:bg-foreground/5",
+                  "flex size-10 shrink-0 items-center justify-center rounded-xl",
+                  "bg-white/10",
+                  "transition-colors duration-300",
+                  "group-hover:bg-white/20",
                 )}
               >
                 <Icon
-                  className="size-4 text-muted-foreground transition-colors duration-300 group-hover:text-foreground"
+                  className="size-4 text-white/60 transition-colors duration-300 group-hover:text-white"
                   aria-hidden="true"
                 />
               </div>

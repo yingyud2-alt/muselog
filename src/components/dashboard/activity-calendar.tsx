@@ -25,7 +25,8 @@ function formatTooltipDate(dateStr: string): string {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(year, month - 1, day));
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
 function formatActivityTooltip(day: ActivityWeek["days"][number]): string {
