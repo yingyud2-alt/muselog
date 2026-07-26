@@ -1,4 +1,6 @@
 import { CONTENT_CATALOG } from "@/lib/content/content-data";
+import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
+import { getAllUserContent } from "@/lib/content/user-content-store";
 import type { Content, ContentType } from "@/lib/content/types";
 import { MEDIA_EXPLORE_IDS } from "@/types/media";
 import type { MediaItem, MediaType } from "@/types/media";
@@ -35,6 +37,76 @@ function getJournalContentIds(items: MediaItem[]): Set<string> {
   return ids;
 }
 
+function userContentToWaitingItem(
+  id: string,
+  type: ContentType,
+  title: string,
+  creator: string,
+  cover: string,
+): Content {
+  return {
+    id,
+    type,
+    title,
+    creator,
+    cover,
+    description: "",
+    tags: [],
+    source: "manual",
+  };
+}
+
+function getUserWantItems(
+  inJournal: Set<string>,
+  contentType: ContentType,
+): Content[] {
+  if (typeof window === "undefined") return [];
+
+  let stateMap: Record<string, import("@/lib/content/user-media-state").UserMediaState> =
+    {};
+  try {
+    const raw = window.localStorage.getItem("muselog-user-media-state-v1");
+    if (raw) {
+      stateMap = JSON.parse(raw) as typeof stateMap;
+    }
+  } catch {
+    stateMap = {};
+  }
+
+  const userContentMap = Object.fromEntries(
+    getAllUserContent().map((item) => [item.id, item]),
+  );
+  const results: Content[] = [];
+  const seen = new Set<string>();
+
+  for (const state of Object.values(stateMap)) {
+    if (state.status !== "WANT") continue;
+    if (inJournal.has(state.mediaKey)) continue;
+
+    const catalog = getContentByMediaKey(state.mediaKey);
+    const userItem = userContentMap[state.mediaKey];
+    const type =
+      catalog?.type ?? userItem?.type ?? state.mediaType ?? null;
+    if (type !== contentType) continue;
+
+    const id = state.mediaKey;
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    results.push(
+      userContentToWaitingItem(
+        id,
+        type,
+        catalog?.title ?? userItem?.title ?? state.title ?? "Untitled",
+        catalog?.creator ?? userItem?.creator ?? state.creator ?? "",
+        catalog?.cover ?? userItem?.cover ?? state.cover ?? "from-slate-800 via-slate-900 to-black",
+      ),
+    );
+  }
+
+  return results;
+}
+
 export function getWaitingList(
   items: MediaItem[],
   tab: WaitingTab,
@@ -42,9 +114,18 @@ export function getWaitingList(
   const inJournal = getJournalContentIds(items);
   const contentType = TAB_TO_CONTENT[tab];
 
-  return CONTENT_CATALOG.filter(
+  const catalogItems = CONTENT_CATALOG.filter(
     (entry) => entry.type === contentType && !inJournal.has(entry.id),
   );
+
+  const userWantItems = getUserWantItems(inJournal, contentType);
+  const catalogIds = new Set(catalogItems.map((item) => item.id));
+  const merged = [
+    ...catalogItems,
+    ...userWantItems.filter((item) => !catalogIds.has(item.id)),
+  ];
+
+  return merged;
 }
 
 export function getDefaultWaitingTab(items: MediaItem[]): WaitingTab {
@@ -66,11 +147,26 @@ export function searchWaitingContent(
     return CONTENT_CATALOG.filter((entry) => !inJournal.has(entry.id));
   }
 
+  const userMatches = getUserWantItems(inJournal, "BOOK")
+    .concat(getUserWantItems(inJournal, "MOVIE"))
+    .concat(getUserWantItems(inJournal, "MUSIC"))
+    .filter((entry) => {
+      if (inJournal.has(entry.id)) return false;
+      if (entry.title.toLowerCase().includes(normalized)) return true;
+      if (entry.creator.toLowerCase().includes(normalized)) return true;
+      return false;
+    });
+
+  const seen = new Set<string>();
   return CONTENT_CATALOG.filter((entry) => {
     if (inJournal.has(entry.id)) return false;
     if (entry.title.toLowerCase().includes(normalized)) return true;
     if (entry.creator.toLowerCase().includes(normalized)) return true;
     return entry.tags.some((tag) => tag.toLowerCase().includes(normalized));
+  }).concat(userMatches).filter((entry) => {
+    if (seen.has(entry.id)) return false;
+    seen.add(entry.id);
+    return true;
   });
 }
 

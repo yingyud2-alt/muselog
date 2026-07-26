@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Upload } from "lucide-react";
 
 import { LibraryCard } from "@/components/library/library-card";
 import { LibraryDetail } from "@/components/library/library-detail";
@@ -54,21 +55,32 @@ export function LibraryView() {
         className="mx-auto max-w-6xl px-5 pt-[calc(env(safe-area-inset-top)+20px)] md:px-8 md:py-10"
         style={{ paddingBottom: MOBILE_NAV_CLEARANCE }}
       >
-        <header className="mb-6 max-w-3xl md:mb-8">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 md:text-[11px]">
-            Library
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white/92 md:mt-2 md:text-3xl">
-            Your personal collection
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-white/48">
-            Books, films, and music you&apos;ve saved — want lists, journeys,
-            and finished favorites in one place.
-          </p>
-          <p className="mt-3 text-[13px] text-white/42 md:text-sm">
-            <span className="md:hidden">{mobileSummary}</span>
-            <span className="hidden md:inline">{summary}</span>
-          </p>
+        <header className="mb-6 md:mb-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="max-w-3xl">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 md:text-[11px]">
+                Library
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white/92 md:mt-2 md:text-3xl">
+                Your personal collection
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-white/48">
+                Books, films, and music you&apos;ve saved — want lists, journeys,
+                and finished favorites in one place.
+              </p>
+              <p className="mt-3 text-[13px] text-white/42 md:text-sm">
+                <span className="md:hidden">{mobileSummary}</span>
+                <span className="hidden md:inline">{summary}</span>
+              </p>
+            </div>
+            <Link
+              href="/library/import"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/65 hover:bg-white/[0.07] md:px-4 md:py-2.5 md:text-sm"
+            >
+              <Upload className="size-3.5 md:size-4" />
+              Import
+            </Link>
+          </div>
         </header>
 
         <div className="relative mb-4 max-w-2xl">

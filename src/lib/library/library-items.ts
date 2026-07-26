@@ -3,6 +3,7 @@ import {
   mediaKeyFromJournalItemId,
   mediaTypeToContentType,
 } from "@/lib/content/bubble-content-bridge";
+import { getUserContentById } from "@/lib/content/user-content-store";
 import type { Memory } from "@/lib/content/types";
 import type {
   LibraryItem,
@@ -82,12 +83,14 @@ export function buildLibraryItems(
     const memory = memoryById.get(mediaKey);
     const journal = journalByKey.get(mediaKey);
     const content = getContentByMediaKey(mediaKey);
+    const userContent = getUserContentById(mediaKey);
     const status = resolveStatus(stored, memory, journal);
 
     if (status === "NONE") continue;
 
     const type: LibraryMediaType =
       content?.type ??
+      userContent?.type ??
       stored?.mediaType ??
       (journal?.type === "book"
         ? "BOOK"
@@ -97,22 +100,24 @@ export function buildLibraryItems(
 
     const title =
       content?.title ??
+      userContent?.title ??
       stored?.title ??
       journal?.title ??
       "Untitled";
 
     const creator =
-      content?.creator ?? stored?.creator ?? journal?.creator ?? "";
+      content?.creator ?? userContent?.creator ?? stored?.creator ?? journal?.creator ?? "";
 
     const cover =
       content?.cover ??
+      userContent?.cover ??
       stored?.cover ??
       journal?.cover ??
       "from-slate-800 via-slate-900 to-black";
 
     items.push({
       mediaKey,
-      contentId: content?.id ?? (mediaKey.startsWith("bubble-") ? null : mediaKey),
+      contentId: content?.id ?? userContent?.id ?? (mediaKey.startsWith("bubble-") ? null : mediaKey),
       title,
       creator,
       cover,
