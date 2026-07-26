@@ -26,7 +26,7 @@ export default async function ExploreDetailPage({
   }
 
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#0D1117] pb-[calc(env(safe-area-inset-bottom)+32px)] text-white md:min-h-screen">
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#0D1117] pb-[calc(env(safe-area-inset-bottom)+88px)] text-white md:min-h-screen md:pb-[calc(env(safe-area-inset-bottom)+32px)]">
       <div className="mx-auto max-w-5xl px-6 py-8 md:px-8 md:py-10">
         <Link
           href="/explore"

@@ -1,9 +1,15 @@
 import { ExploreCatalog } from "@/components/explore/explore-catalog";
+import { SearchBar } from "@/components/explore/search-bar";
+import { MobileExplore } from "@/components/mobile/MobileExplore";
 
 export default function ExplorePage() {
   return (
-    <main className="min-h-[100svh] overflow-x-hidden bg-[#0D1117] pb-[calc(env(safe-area-inset-bottom)+32px)] text-white md:min-h-screen">
-      <div className="mx-auto max-w-6xl px-6 py-8 md:px-8 md:py-10">
+    <main className="min-h-[100svh] overflow-x-hidden bg-[#0D1117] text-white md:min-h-screen">
+      <div className="md:hidden">
+        <MobileExplore />
+      </div>
+
+      <div className="mx-auto hidden max-w-6xl px-6 py-8 pb-[calc(env(safe-area-inset-bottom)+32px)] md:block md:px-8 md:py-10">
         <header className="mb-10 max-w-2xl">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/38">
             Explore
@@ -16,6 +22,8 @@ export default function ExplorePage() {
             personal MuseLog.
           </p>
         </header>
+
+        <SearchBar className="mb-8 max-w-2xl" />
 
         <ExploreCatalog />
       </div>

@@ -1,16 +1,11 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  BookOpen,
-  Film,
-  Headphones,
-  Mic,
-  Plus,
-  Tv,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { BookOpen, Film, Headphones, Mic, Tv, X, type LucideIcon } from "lucide-react";
+
+import { BubbleActionPanel, type BubbleSubPanel } from "@/components/dashboard/bubble-action-panel";
+import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 
 import { type MediaType, type WorkBubble } from "./mood-bubble-data";
 import {
@@ -128,21 +123,53 @@ export function RecommendationModal({
   selected,
   onClose,
 }: RecommendationModalProps) {
+  const [subPanelByWork, setSubPanelByWork] = useState<
+    Record<number, BubbleSubPanel>
+  >({});
   const selectedModalStyles = selected ? getModalStyles(selected.color) : null;
+  const subPanel = selected ? (subPanelByWork[selected.id] ?? "none") : "none";
+
+  const setSubPanel = useCallback((next: BubbleSubPanel) => {
+    if (!selected) return;
+    setSubPanelByWork((current) => ({ ...current, [selected.id]: next }));
+  }, [selected]);
+
+  useEffect(() => {
+    if (!selected) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (subPanel !== "none") {
+        setSubPanel("none");
+        return;
+      }
+      onClose();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selected, subPanel, onClose, setSubPanel]);
 
   return (
     <AnimatePresence>
       {selected && selectedModalStyles && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-xl pt-[max(24px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))] md:p-0"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-xl pt-[max(24px,env(safe-area-inset-top))] md:p-0"
+          style={{ paddingBottom: MOBILE_NAV_CLEARANCE }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={() => {
+            if (subPanel !== "none") {
+              setSubPanel("none");
+              return;
+            }
+            onClose();
+          }}
         >
           <motion.div
             onClick={(event) => event.stopPropagation()}
-            className="relative w-[calc(100vw-40px)] max-h-[calc(100svh-56px)] max-w-[380px] overflow-y-auto rounded-[28px] p-[24px] text-center text-white backdrop-blur-2xl md:mx-4 md:max-h-none md:w-full md:max-w-[360px] md:rounded-3xl md:p-8"
+            className="relative w-[calc(100vw-40px)] max-h-[min(calc(100svh-120px),720px)] max-w-[380px] overflow-y-auto rounded-[28px] p-[24px] text-center text-white backdrop-blur-2xl md:mx-4 md:max-h-none md:w-full md:max-w-[360px] md:rounded-3xl md:p-8"
             style={{
               background: selectedModalStyles.background,
               border: selectedModalStyles.border,
@@ -205,13 +232,11 @@ export function RecommendationModal({
               &ldquo;{selected.quote}&rdquo;
             </p>
 
-            <button
-              type="button"
-              className="mt-7 flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-black transition-colors hover:bg-white md:mt-8 md:h-auto md:py-3"
-            >
-              <Plus size={18} />
-              Add to journal
-            </button>
+            <BubbleActionPanel
+              work={selected}
+              subPanel={subPanel}
+              onSubPanelChange={setSubPanel}
+            />
           </motion.div>
         </motion.div>
       )}

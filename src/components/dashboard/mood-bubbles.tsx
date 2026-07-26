@@ -7,20 +7,19 @@ import {
   useRef,
   useState,
 } from "react";
-import { AnimatePresence, motion, useMotionValue } from "framer-motion";
+import { motion, useMotionValue } from "framer-motion";
 import {
   BookOpen,
   Film,
   Headphones,
   Mic,
-  Plus,
   Tv,
-  X,
   type LucideIcon,
 } from "lucide-react";
 
 import { getWorkBubblesForContainer, type MediaType, type WorkBubble } from "./mood-bubble-data";
 import { MobileBubbleExperience } from "./mobile-bubble-experience";
+import { RecommendationModal } from "./mood-bubble-shared";
 import {
   computeFocusOffsets,
   findFocusCluster,
@@ -46,7 +45,6 @@ import {
   getBubbleBorder,
   getBubbleGlow,
   getBubbleVisualState,
-  getModalStyles,
   MOONLIGHT_GRADIENT,
   PAPER_NOISE_DATA_URL,
   TEXT_COLORS,
@@ -560,10 +558,6 @@ function DesktopBubbleHero() {
     handlePointerMove(event);
   };
 
-  const selectedModalStyles = selected
-    ? getModalStyles(selected.color)
-    : null;
-
   return (
     <section
       ref={containerRef}
@@ -615,91 +609,10 @@ function DesktopBubbleHero() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {selected && selectedModalStyles && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelected(null)}
-          >
-            <motion.div
-              onClick={(event) => event.stopPropagation()}
-              className="relative w-[360px] rounded-3xl p-8 text-center text-white backdrop-blur-2xl"
-              style={{
-                background: selectedModalStyles.background,
-                border: selectedModalStyles.border,
-                boxShadow: selectedModalStyles.boxShadow,
-              }}
-            >
-              <button
-                type="button"
-                aria-label="Close recommendation"
-                className="absolute right-5 top-5 opacity-70 transition-opacity hover:opacity-100"
-                style={{ color: TEXT_COLORS.icon }}
-                onClick={() => setSelected(null)}
-              >
-                <X size={18} />
-              </button>
-
-              <div
-                className="flex h-44 items-center justify-center rounded-2xl"
-                style={{ background: selectedModalStyles.coverBackground }}
-              >
-                <MediaIcon
-                  type={selected.type}
-                  className="size-[50px]"
-                  style={{ color: TEXT_COLORS.icon, opacity: 0.82 }}
-                />
-              </div>
-
-              <p
-                className="mt-6 text-xs uppercase"
-                style={{
-                  color: TEXT_COLORS.type,
-                  letterSpacing: "0.18em",
-                  opacity: 0.48,
-                }}
-              >
-                {selected.type}
-              </p>
-
-              <h3
-                className="mt-3 text-3xl font-semibold"
-                style={{ color: TEXT_COLORS.titleFocused }}
-              >
-                {selected.title}
-              </h3>
-
-              <p
-                className="mt-2 text-sm"
-                style={{ color: TEXT_COLORS.subtitle }}
-              >
-                {selected.creator}
-              </p>
-
-              <p
-                className="mt-5 text-[15px] italic leading-snug"
-                style={{
-                  color: TEXT_COLORS.quoteFocused,
-                  fontWeight: 500,
-                }}
-              >
-                &ldquo;{selected.quote}&rdquo;
-              </p>
-
-              <button
-                type="button"
-                className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-white/95 py-3 text-black transition-colors hover:bg-white"
-              >
-                <Plus size={18} />
-                Add to journal
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <RecommendationModal
+        selected={selected}
+        onClose={() => setSelected(null)}
+      />
     </section>
   );
 }

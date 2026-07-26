@@ -5,36 +5,65 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { Memory, MemoryStatus } from "./types";
 
 const STORAGE_KEY = "muselog-memories-v2";
+const EMPTY_MEMORIES: Memory[] = [];
 
-function readMemories(): Memory[] {
+let cachedMemories: Memory[] = EMPTY_MEMORIES;
+let cacheInitialized = false;
+
+function readMemoriesFromStorage(): Memory[] {
   if (typeof window === "undefined") {
-    return [];
+    return EMPTY_MEMORIES;
   }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
 
     if (!raw) {
-      return [];
+      return EMPTY_MEMORIES;
     }
 
     const parsed = JSON.parse(raw) as Memory[];
 
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : EMPTY_MEMORIES;
   } catch {
-    return [];
+    return EMPTY_MEMORIES;
   }
 }
 
-function writeMemories(memories: Memory[]): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+function ensureCacheInitialized(): void {
+  if (cacheInitialized || typeof window === "undefined") {
+    return;
+  }
+
+  cachedMemories = readMemoriesFromStorage();
+  cacheInitialized = true;
+}
+
+function reloadCacheFromStorage(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  cachedMemories = readMemoriesFromStorage();
+  cacheInitialized = true;
 }
 
 function subscribe(callback: () => void) {
-  window.addEventListener("muselog-memories-updated", callback);
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  ensureCacheInitialized();
+
+  const handleUpdate = () => {
+    reloadCacheFromStorage();
+    callback();
+  };
+
+  window.addEventListener("muselog-memories-updated", handleUpdate);
 
   return () => {
-    window.removeEventListener("muselog-memories-updated", callback);
+    window.removeEventListener("muselog-memories-updated", handleUpdate);
   };
 }
 
@@ -42,12 +71,21 @@ function createMemoryId(contentId: string): string {
   return `memory-${contentId}`;
 }
 
+function writeMemories(memories: Memory[]): void {
+  cachedMemories = memories.length > 0 ? memories : EMPTY_MEMORIES;
+  cacheInitialized = true;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+  window.dispatchEvent(new CustomEvent("muselog-memories-updated"));
+}
+
 export function getAllMemories(): Memory[] {
-  return readMemories();
+  ensureCacheInitialized();
+  return cachedMemories;
 }
 
 export function getMemoryByContentId(contentId: string): Memory | null {
-  return readMemories().find((memory) => memory.contentId === contentId) ?? null;
+  ensureCacheInitialized();
+  return cachedMemories.find((memory) => memory.contentId === contentId) ?? null;
 }
 
 export function upsertMemory(
@@ -56,7 +94,10 @@ export function upsertMemory(
       status: MemoryStatus;
     },
 ): Memory {
-  const memories = readMemories();
+  ensureCacheInitialized();
+
+  const memories =
+    cachedMemories === EMPTY_MEMORIES ? [] : [...cachedMemories];
   const existingIndex = memories.findIndex(
     (memory) => memory.contentId === partial.contentId,
   );
@@ -84,18 +125,16 @@ export function upsertMemory(
   }
 
   writeMemories(memories);
-  window.dispatchEvent(new CustomEvent("muselog-memories-updated"));
 
   return next;
 }
 
 export function removeMemory(contentId: string): void {
-  const memories = readMemories().filter(
-    (memory) => memory.contentId !== contentId,
-  );
+  ensureCacheInitialized();
 
-  writeMemories(memories);
-  window.dispatchEvent(new CustomEvent("muselog-memories-updated"));
+  writeMemories(
+    cachedMemories.filter((memory) => memory.contentId !== contentId),
+  );
 }
 
 export function useUserMemory(contentId: string) {
@@ -120,8 +159,8 @@ export function useUserMemory(contentId: string) {
 export function useAllMemories() {
   const memories = useSyncExternalStore(
     subscribe,
-    () => getAllMemories(),
-    () => [],
+    getAllMemories,
+    () => EMPTY_MEMORIES,
   );
 
   return { memories };

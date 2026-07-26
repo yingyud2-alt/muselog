@@ -27,7 +27,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { title: "Home", href: "/", icon: Home },
   { title: "Library", href: "/library", icon: Library },
-  { title: "Calendar", href: "/calendar", icon: Calendar },
+  { title: "Journal", href: "/calendar", icon: Calendar },
   { title: "Explore", href: "/explore", icon: Compass },
   { title: "Profile", href: "/profile", icon: User },
 ];
@@ -123,6 +123,7 @@ export function Sidebar() {
             "transition-colors hover:border-white/16 hover:bg-[#131922]/90 hover:text-white/90",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
             "right-4 top-[calc(env(safe-area-inset-top)+16px)] md:left-6 md:right-auto md:top-6",
+            "max-md:hidden",
           )}
         >
           <Menu className="size-[18px]" aria-hidden="true" />

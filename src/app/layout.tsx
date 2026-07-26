@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { MobileNavigation } from "@/components/mobile/MobileNavigation";
 import { Sidebar } from "@/components/sidebar";
 
 import "./globals.css";
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <Sidebar />
         {children}
+        <MobileNavigation />
       </body>
     </html>
   );
