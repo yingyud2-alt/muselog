@@ -75,3 +75,70 @@ export function buildJournalItemFromWork(
 export function mediaKeyFromJournalItemId(journalItemId: string): string {
   return journalItemId.replace(/^journal-/, "");
 }
+
+export function getContentByMediaKey(mediaKey: string): Content | null {
+  if (mediaKey.startsWith("bubble-")) return null;
+  return CONTENT_CATALOG.find((entry) => entry.id === mediaKey) ?? null;
+}
+
+export function contentTypeToMediaType(type: ContentType): MediaType {
+  return CONTENT_TO_MEDIA[type];
+}
+
+export function mediaTypeToContentType(type: MediaType): ContentType {
+  if (type === "book") return "BOOK";
+  if (type === "movie") return "MOVIE";
+  return "MUSIC";
+}
+
+export function defaultJourneyColorForType(type: LibraryMediaTypeLike): JourneyColor {
+  const mediaType =
+    type === "BOOK" ? "book" : type === "MOVIE" ? "movie" : "music";
+  return TYPE_JOURNEY_COLORS[mediaType];
+}
+
+type LibraryMediaTypeLike = "BOOK" | "MOVIE" | "MUSIC";
+
+export function buildJournalItemFromMediaKey(
+  mediaKey: string,
+  partial: Partial<MediaItem> & Pick<MediaItem, "status" | "date">,
+  fallback?: {
+    title: string;
+    creator: string;
+    cover?: string;
+    type: LibraryMediaTypeLike;
+    quote?: string;
+    tags?: string[];
+  },
+): MediaItem {
+  const content = getContentByMediaKey(mediaKey);
+  const type = content
+    ? contentTypeToMediaType(content.type)
+    : fallback
+      ? (fallback.type === "BOOK"
+          ? "book"
+          : fallback.type === "MOVIE"
+            ? "movie"
+            : "music")
+      : "book";
+
+  return {
+    id: resolveJournalItemId(mediaKey),
+    type,
+    title: content?.title ?? fallback?.title ?? "Untitled",
+    creator: content?.creator ?? fallback?.creator ?? "",
+    cover:
+      content?.cover ??
+      fallback?.cover ??
+      "from-slate-800 via-slate-900 to-black",
+    quote: fallback?.quote ?? "",
+    note: "",
+    tags: (content?.tags ?? fallback?.tags ?? []).slice(0, 3),
+    rating: 0,
+    memories: [],
+    journeyColor: defaultJourneyColorForType(
+      content?.type ?? fallback?.type ?? "BOOK",
+    ),
+    ...partial,
+  };
+}

@@ -3,6 +3,10 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 import type { Memory, MemoryStatus } from "./types";
+import {
+  syncExploreMemoryRemoval,
+  syncExploreMemoryToUserState,
+} from "./explore-to-library-sync";
 
 const STORAGE_KEY = "muselog-memories-v2";
 const EMPTY_MEMORIES: Memory[] = [];
@@ -126,6 +130,8 @@ export function upsertMemory(
 
   writeMemories(memories);
 
+  syncExploreMemoryToUserState(next);
+
   return next;
 }
 
@@ -135,6 +141,8 @@ export function removeMemory(contentId: string): void {
   writeMemories(
     cachedMemories.filter((memory) => memory.contentId !== contentId),
   );
+
+  syncExploreMemoryRemoval(contentId);
 }
 
 export function useUserMemory(contentId: string) {

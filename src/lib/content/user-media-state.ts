@@ -19,12 +19,21 @@ export type UserMediaStatus = "NONE" | "WANT" | "ONGOING" | "FINISHED";
 export interface UserMediaState {
   mediaKey: string;
   status: UserMediaStatus;
+  progress?: number;
   rating?: number;
   shortReview?: string;
+  notes?: string;
   startDate?: string;
   endDate?: string;
   addedToJournal: boolean;
   journeyColor?: JourneyColor;
+  createdAt?: string;
+  updatedAt?: string;
+  title?: string;
+  creator?: string;
+  cover?: string;
+  mediaType?: "BOOK" | "MOVIE" | "MUSIC";
+  quote?: string;
 }
 
 export type JournalFormValues = {
@@ -92,19 +101,41 @@ function write(next: Record<string, UserMediaState>) {
 function upsertState(mediaKey: string, partial: Partial<UserMediaState>) {
   ensureInit();
   const current = cached[mediaKey];
+  const now = new Date().toISOString();
+
   const nextState: UserMediaState = {
     mediaKey,
     status: partial.status ?? current?.status ?? "NONE",
+    progress: partial.progress ?? current?.progress,
     rating: partial.rating ?? current?.rating,
     shortReview: partial.shortReview ?? current?.shortReview,
+    notes: partial.notes ?? current?.notes,
     startDate: partial.startDate ?? current?.startDate,
     endDate: partial.endDate ?? current?.endDate,
     addedToJournal: partial.addedToJournal ?? current?.addedToJournal ?? false,
     journeyColor: partial.journeyColor ?? current?.journeyColor,
+    createdAt: current?.createdAt ?? partial.createdAt ?? now,
+    updatedAt: now,
+    title: partial.title ?? current?.title,
+    creator: partial.creator ?? current?.creator,
+    cover: partial.cover ?? current?.cover,
+    mediaType: partial.mediaType ?? current?.mediaType,
+    quote: partial.quote ?? current?.quote,
   };
 
   write({ ...cached, [mediaKey]: nextState });
   return nextState;
+}
+
+export function upsertUserMediaState(
+  mediaKey: string,
+  partial: Partial<UserMediaState>,
+) {
+  return upsertState(mediaKey, partial);
+}
+
+export function removeUserMediaState(mediaKey: string) {
+  removeState(mediaKey);
 }
 
 function removeState(mediaKey: string) {
@@ -115,12 +146,14 @@ function removeState(mediaKey: string) {
   write(next);
 }
 
-function syncMemoryStore(work: WorkBubble, state: UserMediaState) {
-  const content = findCatalogContentForBubble(work);
-  if (!content) return;
+function syncMemoryStoreByMediaKey(
+  mediaKey: string,
+  state: UserMediaState,
+) {
+  if (mediaKey.startsWith("bubble-")) return;
 
   if (state.status === "NONE") {
-    removeMemory(content.id);
+    removeMemory(mediaKey);
     return;
   }
 
@@ -132,11 +165,21 @@ function syncMemoryStore(work: WorkBubble, state: UserMediaState) {
         : "COMPLETED";
 
   upsertMemory({
-    contentId: content.id,
+    contentId: mediaKey,
     status: memoryStatus,
     rating: state.rating,
-    note: state.shortReview,
+    note: state.shortReview ?? state.notes,
   });
+}
+
+function syncMemoryStore(work: WorkBubble, state: UserMediaState) {
+  const content = findCatalogContentForBubble(work);
+  if (!content) return;
+  syncMemoryStoreByMediaKey(content.id, state);
+}
+
+export function syncMemoryFromUserState(mediaKey: string, state: UserMediaState) {
+  syncMemoryStoreByMediaKey(mediaKey, state);
 }
 
 function journalStatusToUserStatus(status: MediaStatus): UserMediaStatus {
@@ -157,12 +200,21 @@ function resolveEffectiveState(
     return {
       mediaKey,
       status: journalStatusToUserStatus(journalItem.status),
+      progress: stored?.progress,
       rating: journalItem.rating > 0 ? journalItem.rating : stored?.rating,
       shortReview: journalItem.note || stored?.shortReview,
+      notes: stored?.notes,
       startDate: journalItem.startDate ?? journalItem.date ?? stored?.startDate,
       endDate: journalItem.endDate ?? stored?.endDate,
       addedToJournal: true,
       journeyColor: journalItem.journeyColor ?? stored?.journeyColor,
+      createdAt: stored?.createdAt,
+      updatedAt: stored?.updatedAt,
+      title: stored?.title,
+      creator: stored?.creator,
+      cover: stored?.cover,
+      mediaType: stored?.mediaType,
+      quote: stored?.quote,
     };
   }
 
@@ -240,6 +292,16 @@ export function useBubbleMediaState(work: WorkBubble | null) {
       mediaKey,
       status: "WANT",
       addedToJournal: false,
+      title: work.title,
+      creator: work.creator,
+      cover: findCatalogContentForBubble(work)?.cover,
+      mediaType:
+        work.type === "MOVIE" || work.type === "TV"
+          ? "MOVIE"
+          : work.type === "MUSIC" || work.type === "PODCAST"
+            ? "MUSIC"
+            : "BOOK",
+      quote: work.quote,
     };
     upsertState(mediaKey, next);
     syncMemoryStore(work, next);
@@ -296,6 +358,17 @@ export function useBubbleMediaState(work: WorkBubble | null) {
         addedToJournal: true,
         journeyColor: values.journeyColor,
         shortReview: values.note,
+        notes: values.note,
+        title: work.title,
+        creator: work.creator,
+        cover: findCatalogContentForBubble(work)?.cover,
+        mediaType:
+          work.type === "MOVIE" || work.type === "TV"
+            ? "MOVIE"
+            : work.type === "MUSIC" || work.type === "PODCAST"
+              ? "MUSIC"
+              : "BOOK",
+        quote: work.quote,
       };
 
       upsertState(mediaKey, next);
@@ -332,12 +405,23 @@ export function useBubbleMediaState(work: WorkBubble | null) {
       const next: UserMediaState = {
         mediaKey,
         status: "FINISHED",
+        progress: 100,
         rating: values.rating,
         shortReview: values.shortReview,
         startDate,
         endDate: completedDate,
         addedToJournal: true,
         journeyColor: item.journeyColor,
+        title: work.title,
+        creator: work.creator,
+        cover: findCatalogContentForBubble(work)?.cover,
+        mediaType:
+          work.type === "MOVIE" || work.type === "TV"
+            ? "MOVIE"
+            : work.type === "MUSIC" || work.type === "PODCAST"
+              ? "MUSIC"
+              : "BOOK",
+        quote: work.quote,
       };
 
       upsertState(mediaKey, next);
