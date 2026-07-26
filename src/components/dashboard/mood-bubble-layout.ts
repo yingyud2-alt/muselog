@@ -875,6 +875,29 @@ export function packWorkBubbles(
     .sort((left, right) => left.id - right.id);
 }
 
+/** Desktop home: reserved top padding for floating navigation (px). */
+export const DESKTOP_BUBBLE_CANVAS_TOP = 100;
+/** Global downward shift applied after pack — does not re-simulate positions. */
+export const DESKTOP_BUBBLE_FIELD_OFFSET_Y = 88;
+/** Min bubble-center Y in content coords — keeps large bubbles below nav on hover. */
+export const DESKTOP_BUBBLE_NAV_SAFE_Y = 72;
+/** Slight featured bubble boost (+12%) without changing layout algorithm. */
+export const DESKTOP_FEATURED_SIZE_SCALE = 1.12;
+
+export function applyDesktopBubbleFieldOffset(
+  layout: PlacedBubble[],
+  offsetY = DESKTOP_BUBBLE_FIELD_OFFSET_Y,
+): PlacedBubble[] {
+  if (offsetY === 0) {
+    return layout;
+  }
+
+  return layout.map((bubble) => ({
+    ...bubble,
+    y: bubble.y + offsetY,
+  }));
+}
+
 /** Deterministic idle drift parameters per bubble */
 export function getBubbleDrift(bubbleId: number): {
   amplitude: number;

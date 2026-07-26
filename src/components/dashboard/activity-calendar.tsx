@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 import {
@@ -6,14 +5,13 @@ import {
   type ActivityWeek,
   activityWeeks,
 } from "./mock-data";
-import { SectionHeader } from "./section-header";
 
 const LEVEL_STYLES: Record<ActivityLevel, string> = {
-  0: "bg-muted",
-  1: "bg-foreground/15",
-  2: "bg-foreground/25",
-  3: "bg-foreground/40",
-  4: "bg-foreground/55",
+  0: "bg-white/[0.06]",
+  1: "bg-white/15",
+  2: "bg-white/25",
+  3: "bg-white/40",
+  4: "bg-white/55",
 };
 
 const LEGEND_LEVELS: ActivityLevel[] = [0, 1, 2, 3, 4];
@@ -52,57 +50,64 @@ export function ActivityCalendar({
 }: ActivityCalendarProps) {
   return (
     <section className="space-y-4">
-      <SectionHeader
-        title="Activity"
-        description="Your reading, watching, and listening journey"
-      />
+      <div className="space-y-1">
+        <h2 className="text-lg font-medium tracking-tight text-white/88">
+          Activity
+        </h2>
+        <p className="text-sm text-white/42">
+          Your reading, watching, and listening journey
+        </p>
+      </div>
 
-      <Card className="shadow-sm ring-foreground/8">
-        <CardContent className="space-y-4 pt-0">
-          <div className="-mx-1 overflow-x-auto px-1 pb-1">
-            <div
-              className="inline-flex min-w-max gap-1"
-              role="img"
-              aria-label="Activity calendar for the last 16 weeks"
-            >
-              {weeks.map((week) => (
-                <div
-                  key={week.weekStart}
-                  className="flex shrink-0 flex-col gap-1"
-                >
-                  {week.days.map((day) => (
-                    <div
-                      key={day.date}
-                      title={formatActivityTooltip(day)}
-                      className={cn(
-                        "size-3 shrink-0 rounded-sm sm:size-3.5",
-                        "ring-1 ring-foreground/5 transition-colors",
-                        LEVEL_STYLES[day.level],
-                      )}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+      <div
+        className={cn(
+          "rounded-2xl border border-white/[0.08] bg-white/[0.03]",
+          "p-5 shadow-[0_8px_32px_rgba(0,0,0,0.18)] backdrop-blur-md",
+        )}
+      >
+        <div className="-mx-1 overflow-x-auto px-1 pb-1">
+          <div
+            className="inline-flex min-w-max gap-1"
+            role="img"
+            aria-label="Activity calendar for the last 16 weeks"
+          >
+            {weeks.map((week) => (
+              <div
+                key={week.weekStart}
+                className="flex shrink-0 flex-col gap-1"
+              >
+                {week.days.map((day) => (
+                  <div
+                    key={day.date}
+                    title={formatActivityTooltip(day)}
+                    className={cn(
+                      "size-3 shrink-0 rounded-sm sm:size-3.5",
+                      "ring-1 ring-white/10 transition-colors",
+                      LEVEL_STYLES[day.level],
+                    )}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-            <span>Less</span>
-            <div className="flex items-center gap-1">
-              {LEGEND_LEVELS.map((level) => (
-                <div
-                  key={level}
-                  className={cn(
-                    "size-3 rounded-sm ring-1 ring-foreground/5 sm:size-3.5",
-                    LEVEL_STYLES[level],
-                  )}
-                />
-              ))}
-            </div>
-            <span>More</span>
+        <div className="mt-4 flex items-center justify-end gap-2 text-xs text-white/40">
+          <span>Less</span>
+          <div className="flex items-center gap-1">
+            {LEGEND_LEVELS.map((level) => (
+              <div
+                key={level}
+                className={cn(
+                  "size-3 rounded-sm ring-1 ring-white/10 sm:size-3.5",
+                  LEVEL_STYLES[level],
+                )}
+              />
+            ))}
           </div>
-        </CardContent>
-      </Card>
+          <span>More</span>
+        </div>
+      </div>
     </section>
   );
 }

@@ -1,25 +1,22 @@
 import type { LucideIcon } from "lucide-react";
 import { Calendar, Compass, Home, Library, User } from "lucide-react";
 
-export type MobileNavItem = {
+export type DesktopNavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
 };
 
-export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
+/** Primary desktop navigation — Journal maps to the calendar/journal route. */
+export const DESKTOP_NAV_ITEMS: DesktopNavItem[] = [
   { title: "Home", href: "/", icon: Home },
   { title: "Explore", href: "/explore", icon: Compass },
-  { title: "Journal", href: "/calendar", icon: Calendar },
   { title: "Library", href: "/library", icon: Library },
+  { title: "Journal", href: "/calendar", icon: Calendar },
   { title: "Profile", href: "/profile", icon: User },
 ];
 
-/** Bottom nav bar + floating margin (px). Used for page padding. */
-export const MOBILE_NAV_CLEARANCE =
-  "calc(env(safe-area-inset-bottom) + 88px)";
-
-export function isMobileNavActive(pathname: string, href: string): boolean {
+export function isDesktopNavActive(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
   }

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { NavigationWrapper } from "@/components/navigation/navigation-wrapper";
 import { MobileNavigation } from "@/components/mobile/MobileNavigation";
-import { Sidebar } from "@/components/sidebar";
 
 import "./globals.css";
 
@@ -31,9 +31,8 @@ export default function RootLayout({
       lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">
-        <Sidebar />
-        {children}
+      <body className="min-h-full bg-[#090A0F]">
+        <NavigationWrapper>{children}</NavigationWrapper>
         <MobileNavigation />
       </body>
     </html>

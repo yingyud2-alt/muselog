@@ -20,8 +20,14 @@ import {
 import { getWorkBubblesForContainer, type MediaType, type WorkBubble } from "./mood-bubble-data";
 import { MobileBubbleExperience } from "./mobile-bubble-experience";
 import { RecommendationModal } from "./mood-bubble-shared";
+import { SurpriseMuseButton } from "./surprise-muse-button";
 import {
+  applyDesktopBubbleFieldOffset,
   computeFocusOffsets,
+  DESKTOP_BUBBLE_CANVAS_TOP,
+  DESKTOP_BUBBLE_FIELD_OFFSET_Y,
+  DESKTOP_BUBBLE_NAV_SAFE_Y,
+  DESKTOP_FEATURED_SIZE_SCALE,
   findFocusCluster,
   getBubbleDrift,
   getBubbleOpacity,
@@ -138,6 +144,31 @@ function getTargetDiameter(
   return bubble.baseSize * getBubbleScale(bubble, cluster, index, pointerInside);
 }
 
+function capDiameterForCanvasTop(
+  bubble: PlacedBubble,
+  diameter: number,
+): number {
+  const maxDiameter = (bubble.y - DESKTOP_BUBBLE_NAV_SAFE_Y) * 2;
+
+  if (maxDiameter >= diameter) {
+    return diameter;
+  }
+
+  return Math.max(maxDiameter, bubble.baseSize * 0.9);
+}
+
+function getDesktopTargetDiameter(
+  bubble: PlacedBubble,
+  cluster: FocusCluster,
+  index: number,
+  pointerInside: boolean,
+): number {
+  return capDiameterForCanvasTop(
+    bubble,
+    getTargetDiameter(bubble, cluster, index, pointerInside),
+  );
+}
+
 type BubbleContentProps = {
   work: PlacedBubble;
   state: BubbleTextState;
@@ -252,7 +283,7 @@ function BubbleNode({
   const offset = offsets.get(index) ?? { dx: 0, dy: 0 };
 
   const targetDiameter = useMemo(
-    () => getTargetDiameter(bubble, cluster, index, pointerInside),
+    () => getDesktopTargetDiameter(bubble, cluster, index, pointerInside),
     [bubble, cluster, index, pointerInside],
   );
 
@@ -418,8 +449,20 @@ function DesktopBubbleHero() {
 
   const layout = useMemo(() => {
     const works = getWorkBubblesForContainer(containerSize.width);
+    const scaledWorks = works.map((work) => ({
+      ...work,
+      baseSize: work.alwaysVisible
+        ? Math.round(work.baseSize * DESKTOP_FEATURED_SIZE_SCALE)
+        : work.baseSize,
+    }));
 
-    return packWorkBubbles(works, containerSize.width, containerSize.height);
+    const packed = packWorkBubbles(
+      scaledWorks,
+      containerSize.width,
+      containerSize.height,
+    );
+
+    return applyDesktopBubbleFieldOffset(packed, DESKTOP_BUBBLE_FIELD_OFFSET_Y);
   }, [containerSize.height, containerSize.width]);
 
   const updateInteraction = useCallback(() => {
@@ -486,7 +529,10 @@ function DesktopBubbleHero() {
     const measure = () => {
       const rect = node.getBoundingClientRect();
       const width = Math.round(rect.width);
-      const height = Math.round(rect.height);
+      const height = Math.max(
+        Math.round(rect.height) - DESKTOP_BUBBLE_CANVAS_TOP,
+        640,
+      );
 
       if (
         measuredSizeRef.current.width === width &&
@@ -564,7 +610,8 @@ function DesktopBubbleHero() {
       onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative h-[min(88vh,960px)] min-h-[860px] w-full overflow-hidden"
+      className="relative h-full min-h-[640px] w-full overflow-hidden"
+      style={{ paddingTop: DESKTOP_BUBBLE_CANVAS_TOP }}
     >
       <div
         aria-hidden="true"
@@ -606,6 +653,12 @@ function DesktopBubbleHero() {
           >
             Discover something that matches your mood
           </p>
+        </div>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center md:bottom-8">
+        <div className="pointer-events-auto">
+          <SurpriseMuseButton />
         </div>
       </div>
 

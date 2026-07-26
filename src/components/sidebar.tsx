@@ -5,32 +5,22 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen,
-  Calendar,
-  Compass,
-  Home,
-  Library,
   Menu,
-  User,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-type NavItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-};
+import {
+  DESKTOP_NAV_ITEMS,
+  isDesktopNavActive,
+  type DesktopNavItem,
+} from "@/components/navigation/nav-items";
 
-const navItems: NavItem[] = [
-  { title: "Home", href: "/", icon: Home },
-  { title: "Library", href: "/library", icon: Library },
-  { title: "Journal", href: "/calendar", icon: Calendar },
-  { title: "Explore", href: "/explore", icon: Compass },
-  { title: "Profile", href: "/profile", icon: User },
-];
+type NavItem = DesktopNavItem;
+
+const navItems = DESKTOP_NAV_ITEMS;
 
 const DRAWER_TRANSITION = {
   duration: 0.22,
@@ -38,11 +28,7 @@ const DRAWER_TRANSITION = {
 };
 
 function isActive(pathname: string, href: string) {
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return isDesktopNavActive(pathname, href);
 }
 
 export function Sidebar() {
@@ -106,6 +92,20 @@ export function Sidebar() {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleOpen = () => {
+      openDrawer();
+    };
+
+    window.addEventListener("muselog-nav-open", handleOpen);
+
+    return () => {
+      window.removeEventListener("muselog-nav-open", handleOpen);
+    };
+  }, [openDrawer]);
+
+  const hideHomeDesktopTrigger = pathname === "/";
+
   return (
     <>
       {!isOpen && (
@@ -124,6 +124,7 @@ export function Sidebar() {
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
             "right-4 top-[calc(env(safe-area-inset-top)+16px)] md:left-6 md:right-auto md:top-6",
             "max-md:hidden",
+            hideHomeDesktopTrigger && "md:hidden",
           )}
         >
           <Menu className="size-[18px]" aria-hidden="true" />

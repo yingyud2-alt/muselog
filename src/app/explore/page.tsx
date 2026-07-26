@@ -1,4 +1,7 @@
+import { Suspense } from "react";
+
 import { ExploreCatalog } from "@/components/explore/explore-catalog";
+import { ExploreSearchHydrator } from "@/components/explore/explore-search-hydrator";
 import { SearchBar } from "@/components/explore/search-bar";
 import { MobileExplore } from "@/components/mobile/MobileExplore";
 
@@ -10,6 +13,10 @@ export default function ExplorePage() {
       </div>
 
       <div className="mx-auto hidden max-w-6xl px-6 py-8 pb-[calc(env(safe-area-inset-bottom)+32px)] md:block md:px-8 md:py-10">
+        <Suspense fallback={null}>
+          <ExploreSearchHydrator />
+        </Suspense>
+
         <header className="mb-10 max-w-2xl">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/38">
             Explore

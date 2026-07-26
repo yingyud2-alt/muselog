@@ -2,9 +2,11 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { JournalAddPanel } from "@/components/calendar/journal-add-panel";
 import { CalendarMonthGrid } from "@/components/calendar/CalendarMonthGrid";
 import { MediaFloatingDetail } from "@/components/calendar/MediaFloatingDetail";
 import { MemoryRiverEntry } from "@/components/calendar/memory-river-entry";
+import { ReflectionEntryLink } from "@/components/reflection/reflection-entry-link";
 import {
   MonthHeader,
   type CalendarViewMode,
@@ -16,6 +18,7 @@ import {
   CALENDAR_DEFAULT_YEAR,
 } from "@/lib/calendar/constants";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
+import { dateHasJournalMedia } from "@/lib/calendar/journey-utils";
 import {
   formatMonthYear,
   sortMediaByDateDesc,
@@ -25,6 +28,7 @@ import type { MediaItem } from "@/types/media";
 export function CalendarView() {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [addDate, setAddDate] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const { items } = useCalendarMedia();
 
@@ -47,16 +51,20 @@ export function CalendarView() {
 
   const handleSelectDate = useCallback(
     (date: string) => {
-      const match = items.find(
-        (item) =>
-          item.date === date ||
-          item.startDate === date ||
-          item.endDate === date,
-      );
+      if (dateHasJournalMedia(date, items)) {
+        const match = items.find((item) => {
+          const start = item.startDate ?? item.date;
+          const end = item.endDate ?? start;
+          return date >= start && date <= end;
+        });
 
-      if (match) {
-        setSelectedItem(match);
+        if (match) {
+          setSelectedItem(match);
+        }
+        return;
       }
+
+      setAddDate(date);
     },
     [items],
   );
@@ -71,6 +79,10 @@ export function CalendarView() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />
+
+      <div className="mx-auto flex max-w-6xl justify-end px-4 pt-3 md:px-8">
+        <ReflectionEntryLink />
+      </div>
 
       <div className="mx-auto max-w-6xl px-4 py-4 md:px-8 md:py-5">
         {showMonthGrid && (
@@ -124,6 +136,11 @@ export function CalendarView() {
       </div>
 
       <MediaFloatingDetail item={selectedItem} onClose={closeItem} />
+      <JournalAddPanel
+        date={addDate}
+        journalItems={items}
+        onClose={() => setAddDate(null)}
+      />
     </>
   );
 }

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 
-import { AddToJournalSheet } from "@/components/calendar/add-to-journal-sheet";
+import { JournalAddPanel } from "@/components/calendar/journal-add-panel";
 import { CalendarMonthGrid } from "@/components/calendar/CalendarMonthGrid";
 import { MediaFloatingDetail } from "@/components/calendar/MediaFloatingDetail";
+import { ReflectionEntryLink } from "@/components/reflection/reflection-entry-link";
 import { MonthSummary } from "@/components/calendar/MonthSummary";
 import { HabitStatCards } from "@/components/habit/HabitStatCards";
 import {
@@ -20,7 +21,7 @@ import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 export function MobileCalendar() {
   const [addDate, setAddDate] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<ReturnType<typeof useCalendarMedia>["items"][0] | null>(null);
-  const { items, addJournalEntry } = useCalendarMedia();
+  const { items } = useCalendarMedia();
 
   const monthLabel = formatMonthYear(CALENDAR_DEFAULT_YEAR, CALENDAR_DEFAULT_MONTH);
   const today = getDisplayTodayString();
@@ -44,13 +45,16 @@ export function MobileCalendar() {
         className="min-h-[100svh] px-5 pt-[calc(env(safe-area-inset-top)+20px)]"
         style={{ paddingBottom: MOBILE_NAV_CLEARANCE }}
       >
-        <header className="mb-5">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
-            Journal
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white/92">
-            {monthLabel}
-          </h1>
+        <header className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">
+              Journal
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white/92">
+              {monthLabel}
+            </h1>
+          </div>
+          <ReflectionEntryLink className="shrink-0" />
         </header>
 
         <CalendarMonthGrid
@@ -78,11 +82,10 @@ export function MobileCalendar() {
         />
       </div>
 
-      <AddToJournalSheet
+      <JournalAddPanel
         date={addDate}
         journalItems={items}
         onClose={() => setAddDate(null)}
-        onAdd={addJournalEntry}
       />
 
       <MediaFloatingDetail
