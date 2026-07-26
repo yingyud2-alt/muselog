@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
-
 import { ContentCoverImage } from "@/components/explore/content-cover";
 import { MediaIcon } from "@/components/dashboard/mood-bubble-shared";
-import { Button } from "@/components/ui/button";
+import { WorkStatusActions } from "@/components/work-status-actions";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
-import { upsertMemory } from "@/lib/content/memory-store";
+import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
 import type { Content } from "@/lib/content/types";
 import { cn } from "@/lib/utils";
 
@@ -18,15 +14,7 @@ type ContentCardProps = {
 };
 
 export function ContentCard({ content, isSaved = false }: ContentCardProps) {
-  const router = useRouter();
-
-  const handleAddToMuseLog = () => {
-    upsertMemory({
-      contentId: content.id,
-      status: "WANT",
-    });
-    router.push(`/explore/${content.id}`);
-  };
+  const openDetail = () => openWorkDetail(content.id);
 
   return (
     <article
@@ -36,9 +24,9 @@ export function ContentCard({ content, isSaved = false }: ContentCardProps) {
         "hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.06]",
       )}
     >
-      <Link href={`/explore/${content.id}`} className="block shrink-0">
+      <button type="button" onClick={openDetail} className="block w-full shrink-0 text-left">
         <ContentCoverImage content={content} />
-      </Link>
+      </button>
 
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -57,17 +45,18 @@ export function ContentCard({ content, isSaved = false }: ContentCardProps) {
 
         <div className="space-y-1">
           <h3 className="text-base font-medium leading-snug text-white/92">
-            <Link
-              href={`/explore/${content.id}`}
-              className="transition-colors hover:text-white"
+            <button
+              type="button"
+              onClick={openDetail}
+              className="text-left transition-colors hover:text-white"
             >
               {content.title}
-            </Link>
+            </button>
           </h3>
           <p className="text-sm text-white/48">{content.creator}</p>
         </div>
 
-        <p className="line-clamp-3 text-sm italic leading-relaxed text-white/58">
+        <p className="font-quote line-clamp-3 text-sm italic leading-relaxed text-white/58">
           &ldquo;{content.description}&rdquo;
         </p>
 
@@ -84,15 +73,16 @@ export function ContentCard({ content, isSaved = false }: ContentCardProps) {
           </div>
         )}
 
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-auto w-full border-white/12 bg-white/[0.03] text-white/85 hover:bg-white/10"
-          onClick={handleAddToMuseLog}
-        >
-          <Plus data-icon="inline-start" />
-          Add to MuseLog
-        </Button>
+        <div className="mt-auto">
+          <WorkStatusActions
+            workId={content.id}
+            type={content.type}
+            title={content.title}
+            creator={content.creator}
+            cover={content.cover}
+            variant="compact"
+          />
+        </div>
       </div>
     </article>
   );

@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Search, Upload } from "lucide-react";
 
 import { LibraryCard } from "@/components/library/library-card";
-import { LibraryDetail } from "@/components/library/library-detail";
 import {
   LibraryEmptyState,
   LibraryFilters,
 } from "@/components/library/library-empty-state";
+import { useReturnSnapshot } from "@/hooks/use-return-snapshot";
+import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 import type {
   LibraryItem,
@@ -17,6 +18,7 @@ import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
 } from "@/lib/library/library-types";
+import type { ReturnContext } from "@/lib/navigation/return-context";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +34,35 @@ export function LibraryView() {
   const [typeFilter, setTypeFilter] = useState<LibraryTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("all");
   const [sort, setSort] = useState<LibrarySort>("recently-updated");
-  const [selected, setSelected] = useState<LibraryItem | null>(null);
+
+  const restoreLibraryUi = useCallback((context: ReturnContext) => {
+    const library = context.pageState?.library;
+    if (!library) return;
+    setQuery(library.query ?? "");
+    setTypeFilter((library.typeFilter as LibraryTypeFilter) ?? "all");
+    setStatusFilter((library.statusFilter as LibraryStatusFilter) ?? "all");
+    if (library.sort) {
+      setSort(library.sort as LibrarySort);
+    }
+  }, []);
+
+  const librarySnapshot = useMemo(
+    () => ({
+      library: {
+        query,
+        typeFilter,
+        statusFilter,
+        sort,
+      },
+    }),
+    [query, typeFilter, statusFilter, sort],
+  );
+
+  useReturnSnapshot(librarySnapshot, restoreLibraryUi);
+
+  const openWork = (item: LibraryItem) => {
+    openWorkDetail(item.mediaKey);
+  };
 
   const { items, stats } = useLibraryItems({
     query,
@@ -156,14 +186,12 @@ export function LibraryView() {
               <LibraryCard
                 key={item.mediaKey}
                 item={item}
-                onSelect={setSelected}
+                onSelect={openWork}
               />
             ))}
           </div>
         )}
       </div>
-
-      <LibraryDetail item={selected} onClose={() => setSelected(null)} />
     </>
   );
 }

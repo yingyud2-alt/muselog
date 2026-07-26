@@ -18,6 +18,8 @@ type BubbleJournalFormProps = {
   onSave: (values: JournalFormValues) => void;
   onCancel: () => void;
   className?: string;
+  /** nested = mobile sheet card; panel = desktop glass modal body */
+  presentation?: "nested" | "panel";
 };
 
 export function BubbleJournalForm({
@@ -25,6 +27,7 @@ export function BubbleJournalForm({
   onSave,
   onCancel,
   className,
+  presentation = "nested",
 }: BubbleJournalFormProps) {
   const today = getDisplayTodayString();
   const [startDate, setStartDate] = useState(today);
@@ -35,51 +38,66 @@ export function BubbleJournalForm({
     defaultJourneyColorForWork(work),
   );
   const [note, setNote] = useState("");
+  const isPanel = presentation === "panel";
 
   return (
     <div
       className={cn(
-        "mt-5 rounded-2xl border border-white/10 bg-black/15 p-4 text-left backdrop-blur-sm",
+        "text-left",
+        isPanel
+          ? "space-y-4"
+          : "mt-5 space-y-3 rounded-2xl border border-white/10 bg-black/15 p-4 backdrop-blur-sm",
         className,
       )}
       onClick={(event) => event.stopPropagation()}
     >
-      <p className="text-center text-sm font-medium text-white/88">
-        Add to Journal
-      </p>
+      <div>
+        <p
+          className={cn(
+            "font-medium text-white/88",
+            isPanel ? "text-left text-lg" : "text-center text-sm",
+          )}
+        >
+          Add to Journal
+        </p>
+        {isPanel ? (
+          <p className="mt-1 text-sm text-white/45">{work.title}</p>
+        ) : null}
+      </div>
 
-      <label className="mt-4 block">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
-          Start date
-        </span>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(event) => setStartDate(event.target.value)}
-          className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-        />
-      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
+            Start date
+          </span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(event) => setStartDate(event.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
+            End date
+          </span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(event) => setEndDate(event.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+          />
+        </label>
+      </div>
 
-      <label className="mt-3 block">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
-          End date (optional)
-        </span>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(event) => setEndDate(event.target.value)}
-          className="mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-        />
-      </label>
-
-      <fieldset className="mt-3">
+      <fieldset>
         <legend className="text-[10px] uppercase tracking-[0.14em] text-white/42">
           Status
         </legend>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           {(
             [
-              ["planned", "Planned"],
+              ["planned", "Want"],
               ["ongoing", "Ongoing"],
               ["finished", "Finished"],
             ] as const
@@ -105,7 +123,7 @@ export function BubbleJournalForm({
         </div>
       </fieldset>
 
-      <fieldset className="mt-3">
+      <fieldset>
         <legend className="text-[10px] uppercase tracking-[0.14em] text-white/42">
           Journey color
         </legend>
@@ -132,19 +150,20 @@ export function BubbleJournalForm({
         </div>
       </fieldset>
 
-      <label className="mt-3 block">
+      <label className="block">
         <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
-          Optional note
+          Personal note
         </span>
         <textarea
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          rows={2}
+          rows={isPanel ? 3 : 2}
+          placeholder="A few words about this moment..."
           className="mt-1.5 w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 placeholder:text-white/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
         />
       </label>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           type="button"
           onClick={(event) => {

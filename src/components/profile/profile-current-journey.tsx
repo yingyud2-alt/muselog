@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-
 import { MemoryCover } from "@/components/calendar/memory-cover";
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import {
   formatProfileDate,
   getJourneyStatusLabel,
@@ -25,15 +24,13 @@ export function ProfileCurrentJourney({
       <h2 className="text-sm font-medium text-white/62">Currently exploring</h2>
 
       {!journey ? (
-        <div className="mt-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-8 text-center">
-          <p className="text-sm text-white/45">No active journey yet.</p>
-          <Link
-            href="/explore"
-            className="mt-4 inline-block text-sm text-teal-300/75 hover:text-teal-300/95"
-          >
-            Explore something new
-          </Link>
-        </div>
+        <MuseEmptyState
+          title="No active journey yet."
+          description="Start your first journey and it will live here."
+          actionLabel="Explore something new"
+          actionHref="/explore"
+          className="mt-5"
+        />
       ) : (
         <button
           type="button"

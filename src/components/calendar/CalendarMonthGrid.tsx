@@ -9,6 +9,7 @@ import {
   DESKTOP_JOURNAL_OVERLAY,
   MOBILE_JOURNAL_OVERLAY,
 } from "@/lib/calendar/journey-overlay-utils";
+import { dateHasJournalMedia } from "@/lib/calendar/journey-utils";
 import {
   buildMonthGrid,
   getWeekdayLabels,
@@ -124,6 +125,7 @@ export function CalendarMonthGrid({
                     isCurrentMonth={cell.isCurrentMonth}
                     isToday={today === cell.date}
                     isSelected={selectedDate === cell.date}
+                    hasEntries={dateHasJournalMedia(cell.date, items)}
                     onSelectDate={onSelectDate}
                     variant={variant}
                   />

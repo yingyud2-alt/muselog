@@ -37,7 +37,11 @@ export function MemoryRiverEntry({
       >
         <div
           aria-hidden="true"
-          className="absolute left-[15px] top-0 bottom-0 w-px bg-gradient-to-b from-teal-400/25 via-white/10 to-transparent md:left-1/2 md:-translate-x-1/2"
+          className="absolute left-[15px] top-0 bottom-0 w-px md:left-1/2 md:-translate-x-1/2"
+          style={{
+            backgroundImage:
+              "linear-gradient(to bottom, var(--journal-line-from, rgba(45,212,191,0.25)), rgba(255,255,255,0.1), transparent)",
+          }}
         />
 
         <button
@@ -48,13 +52,16 @@ export function MemoryRiverEntry({
             "rounded-[22px] border border-white/[0.08] bg-white/[0.035]",
             "p-4 shadow-[0_8px_32px_rgba(0,0,0,0.18)] backdrop-blur-md",
             "transition-all duration-300",
-            "hover:border-teal-400/22 hover:bg-white/[0.05] hover:shadow-[0_12px_40px_rgba(45,212,191,0.08)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/35",
+            "hover:border-[color:var(--journal-accent-border)] hover:bg-white/[0.05]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--journal-accent-ring)]",
           )}
         >
           <div
             aria-hidden="true"
-            className="absolute -left-[26px] top-6 size-[14px] rounded-full border border-teal-400/35 bg-[#0D1117] md:hidden"
+            className="absolute -left-[26px] top-6 size-[14px] rounded-full border bg-[#0D1117] md:hidden"
+            style={{
+              borderColor: "var(--journal-accent-border, rgba(45,212,191,0.35))",
+            }}
           />
 
           <div
@@ -82,7 +89,7 @@ export function MemoryRiverEntry({
               </div>
 
               {excerpt && (
-                <p className="line-clamp-2 text-sm italic leading-relaxed text-white/50">
+                <p className="font-quote line-clamp-2 text-sm italic leading-relaxed text-white/50">
                   &ldquo;{excerpt}&rdquo;
                 </p>
               )}

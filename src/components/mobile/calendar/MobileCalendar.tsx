@@ -12,10 +12,11 @@ import {
   CALENDAR_DEFAULT_MONTH,
   CALENDAR_DEFAULT_YEAR,
 } from "@/lib/calendar/constants";
-import { dateHasJournalMedia } from "@/lib/calendar/journey-utils";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
 import { formatMonthYear } from "@/lib/calendar/utils";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
+import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
+import { workHrefForJournalItem } from "@/lib/work/work-route";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 
 export function MobileCalendar() {
@@ -26,21 +27,14 @@ export function MobileCalendar() {
   const monthLabel = formatMonthYear(CALENDAR_DEFAULT_YEAR, CALENDAR_DEFAULT_MONTH);
   const today = getDisplayTodayString();
 
+  /** Empty day/cell space opens Add Memory; cover/card clicks open work detail modal. */
   const handleSelectDate = (date: string) => {
-    if (dateHasJournalMedia(date, items)) {
-      const match = items.find((item) => {
-        const start = item.startDate ?? item.date;
-        const end = item.endDate ?? start;
-        return date >= start && date <= end;
-      });
-      if (match) setSelectedItem(match);
-      return;
-    }
+    setSelectedItem(null);
     setAddDate(date);
   };
 
   return (
-    <>
+    <div>
       <div
         className="min-h-[100svh] px-5 pt-[calc(env(safe-area-inset-top)+20px)]"
         style={{ paddingBottom: MOBILE_NAV_CLEARANCE }}
@@ -64,7 +58,15 @@ export function MobileCalendar() {
           today={today}
           selectedDate={addDate}
           onSelectDate={handleSelectDate}
-          onSelectItem={(item) => setSelectedItem(item)}
+          onSelectItem={(item) => {
+            setAddDate(null);
+            const workHref = workHrefForJournalItem(item);
+            if (workHref) {
+              openWorkDetail(workHref.replace(/^\/work\//, ""));
+              return;
+            }
+            setSelectedItem(item);
+          }}
           variant="mobile"
         />
 
@@ -92,6 +94,6 @@ export function MobileCalendar() {
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
       />
-    </>
+    </div>
   );
 }

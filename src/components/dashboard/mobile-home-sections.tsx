@@ -24,11 +24,11 @@ export function MobileCompactHeader() {
       className="shrink-0 px-6 pb-1 pt-[calc(env(safe-area-inset-top)+12px)] md:hidden"
       style={{ maxHeight: 110 }}
     >
-      <p className="text-[11px] text-white/36">{formatDisplayWeekday()}</p>
-      <h1 className="mt-1.5 pr-[76px] text-[24px] font-semibold leading-tight tracking-tight text-white/92">
+      <p className="font-label text-[11px] text-white/36">{formatDisplayWeekday()}</p>
+      <h1 className="font-hero mt-1.5 pr-[76px] text-[24px] font-medium leading-tight tracking-tight text-white/92">
         {getDisplayGreeting()} 👋
       </h1>
-      <p className="mt-1 pr-[76px] text-[13px] text-white/44">
+      <p className="font-display mt-1 pr-[76px] text-[13px] text-white/44">
         What will you log today?
       </p>
     </header>
@@ -42,16 +42,16 @@ export function MobileBubblePrompt() {
       aria-label="Explore prompt"
     >
       <div className="max-w-[300px] text-center">
-        <p className="text-[10px] uppercase tracking-[0.16em] text-white/38">
+        <p className="font-label text-[10px] uppercase tracking-[0.16em] text-white/38">
           Explore by feeling
         </p>
         <p
-          className="mt-2 text-[16px] italic leading-snug text-white/72"
+          className="font-quote mt-2 text-[16px] italic leading-snug text-white/72"
           style={{ fontWeight: 500 }}
         >
           &ldquo;Begin with a feeling, not a title.&rdquo;
         </p>
-        <p className="mt-2 text-[11px] text-white/36">
+        <p className="font-display mt-2 text-[11px] text-white/36">
           Tap a bubble to explore · Hold and move to focus
         </p>
       </div>
@@ -68,7 +68,7 @@ function MobileInfoCard({
 }) {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-md">
-      <h2 className="text-sm font-medium text-white/82">{title}</h2>
+      <h2 className="font-display text-sm font-bold text-white/82">{title}</h2>
       <div className="mt-3">{children}</div>
     </section>
   );
@@ -88,9 +88,9 @@ export function MobileInfoSection() {
             {inspiration.type === "music" && <Headphones size={16} />}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white/88">{inspiration.title}</p>
-            <p className="mt-0.5 text-xs text-white/42">{inspiration.creator}</p>
-            <p className="mt-2 text-xs leading-relaxed text-white/54">
+            <p className="font-display text-sm font-normal text-white/88">{inspiration.title}</p>
+            <p className="font-body mt-0.5 text-xs text-white/42">{inspiration.creator}</p>
+            <p className="font-display mt-2 text-xs leading-relaxed text-white/54">
               {inspiration.reason}
             </p>
           </div>
@@ -103,9 +103,9 @@ export function MobileInfoSection() {
             className={`h-12 w-9 shrink-0 rounded-lg bg-gradient-to-br ${recentNote.coverClassName}`}
           />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white/88">{recentNote.title}</p>
-            <p className="mt-0.5 text-xs text-white/42">{recentNote.creator}</p>
-            <p className="mt-2 text-xs text-white/48">
+            <p className="font-display text-sm font-normal text-white/88">{recentNote.title}</p>
+            <p className="font-body mt-0.5 text-xs text-white/42">{recentNote.creator}</p>
+            <p className="font-label mt-2 text-xs text-white/48">
               {recentNote.categoryLabel} · {recentNote.lastOpened}
             </p>
           </div>

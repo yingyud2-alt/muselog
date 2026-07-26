@@ -3,18 +3,23 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+import { MonthNavigator } from "@/components/journal/month-navigator";
 import { cn } from "@/lib/utils";
 
 export type CalendarViewMode = "month" | "timeline";
 
 type MonthHeaderProps = {
   monthLabel: string;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
   viewMode: CalendarViewMode;
   onViewModeChange: (mode: CalendarViewMode) => void;
 };
 
 export function MonthHeader({
   monthLabel,
+  onPrevMonth,
+  onNextMonth,
   viewMode,
   onViewModeChange,
 }: MonthHeaderProps) {
@@ -29,13 +34,16 @@ export function MonthHeader({
           <ArrowLeft className="size-4" />
         </Link>
 
-        <div className="min-w-0 flex-1 text-center">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-white/35">
+        <div className="flex min-w-0 flex-1 flex-col items-center">
+          <p className="font-label text-[10px] uppercase tracking-[0.16em] text-white/35">
             Journal
           </p>
-          <h1 className="truncate text-base font-medium tracking-tight text-white/92 md:text-lg">
-            {monthLabel}
-          </h1>
+          <MonthNavigator
+            monthLabel={monthLabel}
+            onPrev={onPrevMonth}
+            onNext={onNextMonth}
+            className="mt-1"
+          />
         </div>
 
         <div
@@ -51,7 +59,7 @@ export function MonthHeader({
               aria-selected={viewMode === mode}
               onClick={() => onViewModeChange(mode)}
               className={cn(
-                "rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] transition-colors",
+                "rounded-full px-3 py-1.5 font-label text-[11px] uppercase tracking-[0.12em] transition-colors",
                 viewMode === mode
                   ? "bg-white/12 text-white"
                   : "text-white/45 hover:text-white/70",

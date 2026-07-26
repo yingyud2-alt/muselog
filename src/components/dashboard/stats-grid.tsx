@@ -31,16 +31,16 @@ export function StatsGrid({ items }: StatsGridProps) {
           >
             <CardContent className="flex items-start justify-between gap-4 pt-0">
               <div className="space-y-2">
-                <p className="text-3xl font-semibold tracking-tight transition-transform duration-300 group-hover:scale-105">
+                <p className="font-label text-3xl font-bold tracking-tight transition-transform duration-300 group-hover:scale-105">
                   {item.value}
                 </p>
 
                 <div>
-                  <p className="font-medium capitalize text-white">
+                  <p className="font-display capitalize text-white">
                     {item.label}
                   </p>
 
-                  <p className="text-xs text-white/50">
+                  <p className="font-display text-xs text-white/50">
                     {item.description}
                   </p>
                 </div>

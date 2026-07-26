@@ -19,7 +19,7 @@ export function MobileHome() {
       <TodayMuseButton />
 
       <p
-        className="shrink-0 px-6 pt-4 text-center text-[15px] italic leading-snug text-white/48"
+        className="font-display shrink-0 px-6 pt-4 text-center text-[15px] leading-snug text-white/48"
         style={{ paddingBottom: MOBILE_NAV_CLEARANCE }}
       >
         Begin with a feeling.

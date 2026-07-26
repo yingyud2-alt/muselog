@@ -26,8 +26,11 @@ export function MemoryStatusIndicator({
         aria-label={`${progress}% complete`}
       >
         <div
-          className="h-full rounded-full bg-teal-400/75"
-          style={{ width: `${progress}%` }}
+          className="h-full rounded-full"
+          style={{
+            width: `${progress}%`,
+            backgroundColor: "var(--journal-activity-1, rgba(45,212,191,0.75))",
+          }}
         />
       </div>
     );

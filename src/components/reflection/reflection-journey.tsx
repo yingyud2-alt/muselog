@@ -12,7 +12,7 @@ type ReflectionJourneyProps = {
 export function ReflectionJourney({ journey, onSelect }: ReflectionJourneyProps) {
   return (
     <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
-      <h2 className="text-sm font-medium text-white/62">Your Journey</h2>
+      <h2 className="text-sm font-medium text-white/62">Recent works</h2>
 
       {journey.length === 0 ? (
         <p className="mt-4 text-sm text-white/42">

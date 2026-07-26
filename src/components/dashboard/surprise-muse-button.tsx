@@ -11,30 +11,28 @@ import {
   PALETTE,
   TEXT_COLORS,
 } from "@/components/dashboard/mood-bubble-visual";
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
+import {
+  pickSurpriseRecommendation,
+  type Recommendation,
+} from "@/lib/ai/recommendation-engine";
+import { useRecommendationInput } from "@/lib/ai/use-recommendation-input";
+import { useJournalEntries } from "@/lib/calendar/journal-store";
 import {
   buildJournalItemFromMediaKey,
   resolveJournalItemId,
 } from "@/lib/content/bubble-content-bridge";
-import type { Content, ContentType } from "@/lib/content/types";
+import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
+import type { ContentType } from "@/lib/content/types";
 import {
   removeUserMediaState,
   syncMemoryFromUserState,
   upsertUserMediaState,
   useUserMediaStateMap,
 } from "@/lib/content/user-media-state";
-import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
-import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import { cn } from "@/lib/utils";
 
 const SURPRISE_MODAL_Z = 60;
-
-function pickRandomContent(excludeId?: string): Content {
-  const pool = CONTENT_CATALOG.filter((entry) => entry.id !== excludeId);
-  const index = Math.floor(Math.random() * pool.length);
-  return pool[index] ?? CONTENT_CATALOG[0];
-}
 
 function getContentModalColor(type: ContentType): string {
   if (type === "BOOK") return PALETTE.forest;
@@ -42,11 +40,11 @@ function getContentModalColor(type: ContentType): string {
   return PALETTE.sage;
 }
 
-function useSurpriseContentState(content: Content | null) {
+function useSurpriseContentState(recommendation: Recommendation | null) {
   const stateMap = useUserMediaStateMap();
   const { entries, addEntry } = useJournalEntries();
 
-  const mediaKey = content?.id ?? "";
+  const mediaKey = recommendation?.id ?? "";
   const journalItemId = resolveJournalItemId(mediaKey);
   const journalItem = useMemo(
     () => entries.find((entry) => entry.id === journalItemId) ?? null,
@@ -58,7 +56,7 @@ function useSurpriseContentState(content: Content | null) {
   const isInJournal = Boolean(journalItem);
 
   const addToWant = useCallback(() => {
-    if (!content) return;
+    if (!recommendation) return;
 
     if (isWant) {
       removeUserMediaState(mediaKey);
@@ -76,19 +74,18 @@ function useSurpriseContentState(content: Content | null) {
       mediaKey,
       status: "WANT" as const,
       addedToJournal: false,
-      title: content.title,
-      creator: content.creator,
-      cover: content.cover,
-      mediaType: content.type,
-      quote: content.description,
+      title: recommendation.title,
+      creator: recommendation.creator,
+      cover: recommendation.cover,
+      mediaType: recommendation.type,
     };
 
     upsertUserMediaState(mediaKey, next);
     syncMemoryFromUserState(mediaKey, next);
-  }, [content, isInJournal, isWant, mediaKey]);
+  }, [isInJournal, isWant, mediaKey, recommendation]);
 
   const addToJournal = useCallback(() => {
-    if (!content || isInJournal) return;
+    if (!recommendation || isInJournal) return;
 
     const today = getDisplayTodayString();
     const item = buildJournalItemFromMediaKey(mediaKey, {
@@ -104,35 +101,36 @@ function useSurpriseContentState(content: Content | null) {
       mediaKey,
       status: "ONGOING" as const,
       addedToJournal: true,
-      title: content.title,
-      creator: content.creator,
-      cover: content.cover,
-      mediaType: content.type,
-      quote: content.description,
+      title: recommendation.title,
+      creator: recommendation.creator,
+      cover: recommendation.cover,
+      mediaType: recommendation.type,
       startDate: today,
     };
 
     upsertUserMediaState(mediaKey, next);
     syncMemoryFromUserState(mediaKey, next);
-  }, [addEntry, content, isInJournal, mediaKey]);
+  }, [addEntry, isInJournal, mediaKey, recommendation]);
 
   return { isWant, isInJournal, addToWant, addToJournal };
 }
 
 type SurpriseMuseModalProps = {
-  content: Content;
+  recommendation: Recommendation;
   onClose: () => void;
   onRefresh: () => void;
 };
 
 function SurpriseMuseModal({
-  content,
+  recommendation,
   onClose,
   onRefresh,
 }: SurpriseMuseModalProps) {
   const { isWant, isInJournal, addToWant, addToJournal } =
-    useSurpriseContentState(content);
-  const modalStyles = getModalStyles(getContentModalColor(content.type));
+    useSurpriseContentState(recommendation);
+  const modalStyles = getModalStyles(
+    getContentModalColor(recommendation.type),
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -145,7 +143,7 @@ function SurpriseMuseModal({
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 flex items-center justify-center bg-black/70 px-5 backdrop-blur-xl md:p-0"
+      className="fixed inset-0 flex items-center justify-center bg-[#090A0F]/45 px-5 backdrop-blur-[10px] md:p-0"
       style={{ zIndex: SURPRISE_MODAL_Z }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -174,49 +172,60 @@ function SurpriseMuseModal({
           <X size={18} />
         </button>
 
-        <div className="mx-auto w-[140px] md:w-[176px]">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-teal-100/45">
+          Muse AI Pick
+        </p>
+
+        <div className="mx-auto mt-4 w-[140px] md:w-[176px]">
           <MemoryCover
-            cover={content.cover}
-            title={content.title}
+            cover={recommendation.cover}
+            title={recommendation.title}
             className="w-full rounded-2xl"
             overlay="deep"
           />
         </div>
 
         <p
-          className="mt-6 text-[11px] uppercase md:mt-6 md:text-xs"
+          className="font-label mt-6 text-[11px] uppercase md:mt-6 md:text-xs"
           style={{
             color: TEXT_COLORS.type,
             letterSpacing: "0.18em",
             opacity: 0.48,
           }}
         >
-          {CONTENT_TYPE_LABELS[content.type]}
+          {CONTENT_TYPE_LABELS[recommendation.type]}
         </p>
 
         <h3
-          className="mt-2 text-[26px] font-semibold leading-tight md:mt-3 md:text-3xl"
+          className="font-display mt-2 text-[26px] font-bold leading-tight md:mt-3 md:text-3xl"
           style={{ color: TEXT_COLORS.titleFocused }}
         >
-          {content.title}
+          {recommendation.title}
         </h3>
 
         <p
-          className="mt-2 text-[14px] md:text-sm"
+          className="font-body mt-2 text-[14px] md:text-sm"
           style={{ color: TEXT_COLORS.subtitle }}
         >
-          {content.creator}
+          {recommendation.creator}
         </p>
 
-        <p
-          className="mt-5 text-[15px] italic leading-relaxed md:mt-5 md:text-[15px] md:leading-snug"
-          style={{
-            color: TEXT_COLORS.quoteFocused,
-            fontWeight: 500,
-          }}
-        >
-          &ldquo;{content.description}&rdquo;
+        <p className="font-body mt-5 text-[14px] leading-relaxed text-teal-50/70 md:text-[15px]">
+          {recommendation.reason}
         </p>
+
+        {recommendation.tags.length > 0 ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+            {recommendation.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="font-label rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[10px] capitalize text-white/40"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         <div className="mt-7 space-y-2.5 md:mt-8">
           <button
@@ -224,7 +233,7 @@ function SurpriseMuseModal({
             disabled={isInJournal}
             onClick={addToJournal}
             className={cn(
-              "flex h-[52px] w-full items-center justify-center rounded-full text-sm font-medium transition md:h-auto md:py-3",
+              "flex h-[52px] w-full items-center justify-center rounded-full font-display text-sm font-bold transition md:h-auto md:py-3",
               isInJournal
                 ? "cursor-default bg-white/20 text-white/45"
                 : "bg-white/95 text-black hover:bg-white",
@@ -268,16 +277,23 @@ function SurpriseMuseModal({
 
 export function SurpriseMuseButton() {
   const [open, setOpen] = useState(false);
-  const [content, setContent] = useState<Content | null>(null);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(
+    null,
+  );
+  const recommendationInput = useRecommendationInput();
 
   const reveal = useCallback(() => {
-    setContent((current) => pickRandomContent(current?.id));
+    setRecommendation((current) =>
+      pickSurpriseRecommendation(recommendationInput, current?.id),
+    );
     setOpen(true);
-  }, []);
+  }, [recommendationInput]);
 
   const refresh = useCallback(() => {
-    setContent((current) => pickRandomContent(current?.id));
-  }, []);
+    setRecommendation((current) =>
+      pickSurpriseRecommendation(recommendationInput, current?.id),
+    );
+  }, [recommendationInput]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -291,7 +307,7 @@ export function SurpriseMuseButton() {
         className={cn(
           "inline-flex items-center gap-2.5 rounded-full",
           "border border-teal-300/18 bg-[rgba(20,40,42,0.6)]",
-          "px-5 py-3 text-sm font-medium text-teal-50/88",
+          "px-5 py-3 font-display text-sm font-bold text-teal-50/88",
           "shadow-[0_8px_28px_rgba(30,70,72,0.2)] backdrop-blur-md",
           "transition hover:border-teal-200/28",
           "hover:shadow-[0_10px_36px_rgba(50,100,98,0.28)]",
@@ -306,9 +322,9 @@ export function SurpriseMuseButton() {
         Surprise Muse
       </button>
 
-      {open && content && typeof document !== "undefined" && (
+      {open && recommendation && typeof document !== "undefined" && (
         <SurpriseMuseModal
-          content={content}
+          recommendation={recommendation}
           onClose={close}
           onRefresh={refresh}
         />

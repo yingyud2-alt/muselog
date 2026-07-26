@@ -11,16 +11,20 @@ import { getUserContentById } from "@/lib/content/user-content-store";
 import {
   buildContentTagsMap,
   calculateCurrentJourney,
+  calculateCulturalDna,
   calculateFavorites,
   calculateIdentity,
   calculateMediaStats,
+  calculateMemoryHighlights,
   calculateMonthlyReflection,
+  calculateMusePersona,
   calculateTasteTags,
+  calculateTasteTimelineMoments,
   calculateTimeline,
 } from "@/lib/profile/profile-utils";
 
 export function useProfileData() {
-  const { allItems } = useLibraryItems();
+  const { allItems, allWorks } = useLibraryItems();
   const { entries: journalEntries } = useJournalEntries();
   const { logs: habitLogs } = useHabitLogs();
   const importHistory = useImportHistory();
@@ -58,6 +62,14 @@ export function useProfileData() {
     () => calculateTasteTags(allItems, journalEntries, contentTagsByKey),
     [allItems, journalEntries, contentTagsByKey],
   );
+  const culturalDna = useMemo(
+    () => calculateCulturalDna(allItems, journalEntries, contentTagsByKey),
+    [allItems, journalEntries, contentTagsByKey],
+  );
+  const musePersona = useMemo(
+    () => calculateMusePersona(culturalDna),
+    [culturalDna],
+  );
   const favorites = useMemo(
     () => calculateFavorites(allItems),
     [allItems],
@@ -66,15 +78,29 @@ export function useProfileData() {
     () => calculateTimeline(journalEntries),
     [journalEntries],
   );
+  const tasteTimeline = useMemo(
+    () => calculateTasteTimelineMoments(timeline),
+    [timeline],
+  );
+  const memoryHighlights = useMemo(
+    () => calculateMemoryHighlights(journalEntries),
+    [journalEntries],
+  );
 
   return {
     stats,
     identity,
+    musePersona,
     currentJourney,
     reflection,
     tasteTags,
+    culturalDna,
     favorites,
     timeline,
+    tasteTimeline,
+    memoryHighlights,
+    /** Canonical Work list for Profile identity surfaces. */
+    works: allWorks,
     getItemByKey: (mediaKey: string) =>
       allItems.find((item) => item.mediaKey === mediaKey) ?? null,
   };

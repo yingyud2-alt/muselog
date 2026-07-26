@@ -3,6 +3,10 @@ import {
   mediaKeyFromJournalItemId,
   mediaTypeToContentType,
 } from "@/lib/content/bubble-content-bridge";
+import {
+  CONTENT_TYPE_LABELS,
+  EXPLORE_MOODS,
+} from "@/lib/content/constants";
 import { getUserContentById } from "@/lib/content/user-content-store";
 import type { Memory } from "@/lib/content/types";
 import type {
@@ -23,6 +27,7 @@ function memoryStatusToUser(status: Memory["status"]): UserMediaStatus {
   if (status === "WANT") return "WANT";
   if (status === "READING") return "ONGOING";
   if (status === "COMPLETED") return "FINISHED";
+  if (status === "DROPPED") return "DROPPED";
   return "NONE";
 }
 
@@ -69,7 +74,7 @@ export function buildLibraryItems(
   }
 
   for (const memory of memories) {
-    if (memory.status !== "DROPPED") keys.add(memory.contentId);
+    keys.add(memory.contentId);
   }
 
   for (const key of journalByKey.keys()) {
@@ -160,7 +165,48 @@ export function computeLibraryStats(items: LibraryItem[]): LibraryStats {
     want: items.filter((item) => item.status === "WANT").length,
     ongoing: items.filter((item) => item.status === "ONGOING").length,
     finished: items.filter((item) => item.status === "FINISHED").length,
+    dropped: items.filter((item) => item.status === "DROPPED").length,
   };
+}
+
+function getLibraryItemTags(item: LibraryItem): string[] {
+  const catalog = getContentByMediaKey(item.mediaKey);
+  const userContent = getUserContentById(item.mediaKey);
+  return [...(catalog?.tags ?? []), ...(userContent?.tags ?? [])];
+}
+
+function matchesLibraryQuery(item: LibraryItem, normalized: string): boolean {
+  if (
+    item.title.toLowerCase().includes(normalized) ||
+    item.creator.toLowerCase().includes(normalized) ||
+    (item.shortReview ?? "").toLowerCase().includes(normalized) ||
+    (item.notes ?? "").toLowerCase().includes(normalized)
+  ) {
+    return true;
+  }
+
+  const typeLabel = CONTENT_TYPE_LABELS[item.type].toLowerCase();
+  if (
+    typeLabel.includes(normalized) ||
+    item.type.toLowerCase().includes(normalized)
+  ) {
+    return true;
+  }
+
+  const tags = getLibraryItemTags(item);
+  if (tags.some((tag) => tag.toLowerCase().includes(normalized))) {
+    return true;
+  }
+
+  return EXPLORE_MOODS.some((mood) => {
+    const moodHit =
+      mood.id.includes(normalized) ||
+      mood.label.toLowerCase().includes(normalized);
+    if (!moodHit) return false;
+    return mood.tagMatch.some((tag) =>
+      tags.some((itemTag) => itemTag.toLowerCase().includes(tag)),
+    );
+  });
 }
 
 export function filterLibraryItems(
@@ -174,20 +220,15 @@ export function filterLibraryItems(
   return items.filter((item) => {
     if (typeFilter !== "all" && item.type !== typeFilter) return false;
     if (statusFilter !== "all" && item.status !== statusFilter) return false;
-
     if (!normalized) return true;
-
-    const haystack = [
-      item.title,
-      item.creator,
-      item.shortReview ?? "",
-      item.notes ?? "",
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return haystack.includes(normalized);
+    return matchesLibraryQuery(item, normalized);
   });
+}
+
+export function getLibraryItemReason(item: LibraryItem): string | null {
+  const tags = getLibraryItemTags(item);
+  if (tags.length === 0) return null;
+  return tags[0];
 }
 
 export function sortLibraryItems(

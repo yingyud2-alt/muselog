@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 
-import {
-  JOURNEY_COLOR_OPTIONS,
-  JOURNEY_COLOR_STYLES,
-  TYPE_JOURNEY_COLORS,
-} from "@/types/media";
+import { MemoryColorPicker } from "@/components/calendar/memory-color-picker";
+import { TYPE_JOURNEY_COLORS } from "@/types/media";
 import type { JourneyColor, MediaItem, MediaType } from "@/types/media";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +36,9 @@ export function ManualJournalForm({
   const [cover, setCover] = useState("from-teal-900 via-slate-900 to-slate-950");
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState<MediaItem["status"]>("READING");
-  const [journeyColor, setJourneyColor] = useState<JourneyColor>("teal");
+  const [journeyColor, setJourneyColor] = useState<JourneyColor>(
+    TYPE_JOURNEY_COLORS.book,
+  );
 
   const handleSave = () => {
     if (!title.trim()) return;
@@ -146,21 +145,7 @@ export function ManualJournalForm({
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {JOURNEY_COLOR_OPTIONS.map((color) => (
-          <button
-            key={color}
-            type="button"
-            onClick={() => setJourneyColor(color)}
-            className={cn(
-              "size-6 rounded-full ring-2 ring-offset-2 ring-offset-[#10161D]",
-              JOURNEY_COLOR_STYLES[color].highlight,
-              journeyColor === color ? "ring-white/40" : "ring-transparent",
-            )}
-            aria-label={JOURNEY_COLOR_STYLES[color].label}
-          />
-        ))}
-      </div>
+      <MemoryColorPicker value={journeyColor} onChange={setJourneyColor} />
 
       <div className="flex gap-2 pt-2">
         <button

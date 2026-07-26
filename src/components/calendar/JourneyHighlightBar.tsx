@@ -1,6 +1,5 @@
 import { normalizeJourneyColor } from "@/lib/calendar/journey-utils";
-import type { JourneyColor } from "@/types/media";
-import { JOURNEY_COLOR_STYLES } from "@/types/media";
+import { JOURNEY_COLOR_SWATCHES, type JourneyColor } from "@/types/media";
 import { cn } from "@/lib/utils";
 
 type JourneyHighlightBarProps = {
@@ -13,15 +12,13 @@ export function JourneyHighlightBar({
   className,
 }: JourneyHighlightBarProps) {
   const resolvedColor = normalizeJourneyColor(color, "teal");
+  const swatch = JOURNEY_COLOR_SWATCHES[resolvedColor];
 
   return (
     <div
       aria-hidden="true"
-      className={cn(
-        "h-1.5 w-full rounded-full",
-        JOURNEY_COLOR_STYLES[resolvedColor].highlight,
-        className,
-      )}
+      className={cn("h-1.5 w-full rounded-full", className)}
+      style={{ backgroundColor: `${swatch}99` }}
     />
   );
 }

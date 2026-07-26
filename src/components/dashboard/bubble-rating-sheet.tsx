@@ -60,6 +60,8 @@ type BubbleRatingSheetProps = {
   onSave: (values: RatingFormValues) => void;
   onCancel: () => void;
   className?: string;
+  /** nested = mobile sheet card; panel = desktop glass modal body */
+  presentation?: "nested" | "panel";
 };
 
 export function BubbleRatingSheet({
@@ -68,32 +70,63 @@ export function BubbleRatingSheet({
   onSave,
   onCancel,
   className,
+  presentation = "nested",
 }: BubbleRatingSheetProps) {
   const labels = getBubbleActionLabels(work.type);
   const today = getDisplayTodayString();
   const [rating, setRating] = useState(initialRating || 4);
   const [completedDate, setCompletedDate] = useState(today);
   const [shortReview, setShortReview] = useState("");
+  const isPanel = presentation === "panel";
 
   return (
     <div
       className={cn(
-        "mt-5 rounded-2xl border border-white/10 bg-black/15 p-4 text-left backdrop-blur-sm",
+        "text-left",
+        isPanel
+          ? "space-y-4"
+          : "mt-5 rounded-2xl border border-white/10 bg-black/15 p-4 backdrop-blur-sm",
         className,
       )}
       onClick={(event) => event.stopPropagation()}
     >
-      <p className="text-center text-sm font-medium text-white/88">
-        {labels.ratingTitle}
-      </p>
+      <div>
+        <p
+          className={cn(
+            "font-medium text-white/88",
+            isPanel ? "text-left text-lg" : "text-center text-sm",
+          )}
+        >
+          {isPanel ? work.title : labels.ratingTitle}
+        </p>
+        {isPanel ? (
+          <p className="mt-1 text-sm text-white/45">{labels.ratingTitle}</p>
+        ) : null}
+      </div>
 
-      <InteractiveStarRating
-        value={rating}
-        onChange={setRating}
-        className="mt-4"
-      />
+      {isPanel ? (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
+            Status
+          </span>
+          <span className="rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[11px] text-white/70">
+            Finished
+          </span>
+        </div>
+      ) : null}
 
-      <label className="mt-4 block">
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.14em] text-white/42">
+          Rating
+        </p>
+        <InteractiveStarRating
+          value={rating}
+          onChange={setRating}
+          className={cn("mt-2", isPanel ? "justify-start" : "justify-center")}
+        />
+      </div>
+
+      <label className="block">
         <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
           {labels.completedDateLabel}
         </span>
@@ -105,20 +138,20 @@ export function BubbleRatingSheet({
         />
       </label>
 
-      <label className="mt-3 block">
+      <label className="block">
         <span className="text-[10px] uppercase tracking-[0.14em] text-white/42">
-          {labels.reviewPlaceholder}
+          Review / reflection
         </span>
         <textarea
           value={shortReview}
           onChange={(event) => setShortReview(event.target.value)}
-          rows={2}
+          rows={isPanel ? 3 : 2}
           placeholder="A few words about this work..."
           className="mt-1.5 w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85 placeholder:text-white/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
         />
       </label>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-1">
         <button
           type="button"
           onClick={(event) => {

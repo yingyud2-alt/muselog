@@ -4,7 +4,7 @@ import { JourneyHighlightBar } from "@/components/calendar/JourneyHighlightBar";
 import { MemoryCover } from "@/components/calendar/memory-cover";
 import { getJourneyColor, getMediaTypeEmoji } from "@/lib/calendar/journey-utils";
 import type { JourneySegment } from "@/lib/calendar/journey-overlay-utils";
-import type { MediaItem } from "@/types/media";
+import { JOURNEY_COLOR_SWATCHES, type MediaItem } from "@/types/media";
 import { cn } from "@/lib/utils";
 
 type MediaJourneySegmentProps = {
@@ -30,14 +30,18 @@ export function MediaJourneySegment({
   return (
     <button
       type="button"
-      aria-label={item.title}
-      onClick={(event) => onSelect(item, event.currentTarget)}
+      aria-label={`Open ${item.title} memory detail`}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect(item, event.currentTarget);
+      }}
       style={{
         gridColumn: `${startCol + 1} / span ${span}`,
         marginBottom: lane * laneStep,
         height: trackHeight,
       }}
-      className="pointer-events-auto relative min-w-0 self-end focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
+      className="pointer-events-auto relative z-40 min-w-0 self-end overflow-visible focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
     >
       {isRangeStart && (
         <div
@@ -74,13 +78,8 @@ export function MediaJourneySegment({
         {isRangeEnd && (
           <span
             aria-hidden="true"
-            className={cn(
-              "absolute -right-0.5 bottom-0 size-1 rounded-full opacity-70",
-              color === "teal" && "bg-teal-400",
-              color === "cyan" && "bg-cyan-400",
-              color === "amber" && "bg-amber-400",
-              color === "olive" && "bg-lime-600",
-            )}
+            className="absolute -right-0.5 bottom-0 size-1 rounded-full opacity-80"
+            style={{ backgroundColor: JOURNEY_COLOR_SWATCHES[color] }}
           />
         )}
       </div>

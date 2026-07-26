@@ -1,5 +1,6 @@
 "use client";
 
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import type { ProfileTimelineYear } from "@/types/profile";
 import type { MediaItem } from "@/types/media";
 
@@ -14,9 +15,13 @@ export function ProfileTimeline({ timeline, onSelect }: ProfileTimelineProps) {
       <h2 className="text-sm font-medium text-white/62">Timeline</h2>
 
       {timeline.length === 0 ? (
-        <p className="mt-4 text-sm text-white/42">
-          Your cultural timeline will appear as you add journal entries.
-        </p>
+        <MuseEmptyState
+          title="No memories yet."
+          description="Your cultural timeline will appear as you add journal entries."
+          actionLabel="Open Journal"
+          actionHref="/calendar"
+          className="mt-4"
+        />
       ) : (
         <div className="mt-6 space-y-8">
           {timeline.map((yearGroup) => (

@@ -10,6 +10,10 @@ import {
   type JournalMediaSelection,
 } from "@/components/calendar/journal-entry-form";
 import { MemoryCover } from "@/components/calendar/memory-cover";
+import {
+  MEDIA_ACTION_OVERLAY_CLASS,
+  MEDIA_ACTION_PANEL_CLASS,
+} from "@/components/shared/media-action-modal";
 import { formatCardDate } from "@/lib/calendar/utils";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
 import {
@@ -47,12 +51,6 @@ const WAITING_TABS: { id: WaitingTab; label: string }[] = [
   { id: "watch", label: "Want to Watch" },
   { id: "listen", label: "Want to Listen" },
 ];
-
-const GLASS_PANEL =
-  "border border-white/[0.1] bg-white/[0.055] shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl";
-
-const LIGHT_OVERLAY =
-  "bg-[#0D1117]/20 backdrop-blur-[8px] saturate-[1.15]";
 
 function draftStatusToMediaStatus(
   status: JournalEntryDraft["status"],
@@ -128,6 +126,7 @@ export function JournalAddPanel({
               ? draft.endDate
               : undefined,
           journeyColor: draft.journeyColor,
+          color: draft.journeyColor,
           rating: draft.rating,
           note: draft.note,
           quote: draft.quote,
@@ -211,7 +210,7 @@ export function JournalAddPanel({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             onClick={handleClose}
-            className={cn("fixed inset-0 z-50", LIGHT_OVERLAY)}
+            className={cn("fixed inset-0 z-50", MEDIA_ACTION_OVERLAY_CLASS)}
           />
 
           {/* Desktop floating glass panel */}
@@ -226,7 +225,7 @@ export function JournalAddPanel({
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
               className={cn(
                 "pointer-events-auto flex max-h-[min(82svh,720px)] w-[min(76vw,880px)] flex-col overflow-hidden rounded-[28px]",
-                GLASS_PANEL,
+                MEDIA_ACTION_PANEL_CLASS,
               )}
             >
               <JournalAddPanelHeader
@@ -262,7 +261,7 @@ export function JournalAddPanel({
             className={cn(
               "fixed inset-x-0 bottom-0 z-50 flex max-h-[88svh] flex-col md:hidden",
               "rounded-t-[24px] border border-white/10 border-b-0",
-              GLASS_PANEL,
+              MEDIA_ACTION_PANEL_CLASS,
             )}
           >
             <div className="relative shrink-0 pt-3">
@@ -330,7 +329,7 @@ function JournalAddPanelHeader({
 
       <p className="text-xs text-white/40">{formatCardDate(date)}</p>
       <h2 className="mt-1 text-xl font-semibold tracking-tight text-white/94">
-        {step === "pick" ? "Add to this memory" : "Shape this memory"}
+        {step === "pick" ? "+ Add Memory" : "Shape this memory"}
       </h2>
       <p className="mt-1 text-sm text-white/48">
         {step === "pick"
@@ -477,7 +476,7 @@ function JournalAddPickStep({
 
         {waitingItems.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-5 text-sm text-white/42">
-            Nothing waiting here yet — search above to discover something new.
+            Nothing waiting here yet — start your first journey from Explore.
           </p>
         ) : (
           <ul className="-mx-1 mt-3 flex gap-2.5 overflow-x-auto px-1 pb-1">

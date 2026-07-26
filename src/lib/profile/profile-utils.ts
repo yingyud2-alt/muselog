@@ -6,13 +6,16 @@ import type { LibraryItem } from "@/lib/library/library-types";
 import type { ImportBatch } from "@/lib/import/import-types";
 import type {
   CurrentJourneyItem,
+  MemoryHighlight,
   MonthlyReflection,
+  MusePersona,
   ProfileFavorite,
   ProfileIdentity,
   ProfileStats,
   ProfileTimelineEntry,
   ProfileTimelineYear,
   TasteTag,
+  TasteTimelineMoment,
 } from "@/types/profile";
 import type { HabitLog } from "@/types/habit";
 import type { MediaItem } from "@/types/media";
@@ -20,11 +23,34 @@ import type { MediaItem } from "@/types/media";
 export const PROFILE_DISPLAY_NAME = "Sam";
 
 const TASTE_KEYWORDS: Record<string, string[]> = {
-  Quiet: ["quiet", "calm", "still", "gentle", "soft", "silent", "peaceful"],
-  Human: ["human", "intimate", "warm", "tender", "love", "relationship", "heart"],
-  Nostalgic: ["nostalgic", "melancholy", "longing", "memory", "past", "bittersweet"],
-  Nature: ["nature", "forest", "ocean", "landscape", "earth", "green", "wind"],
-  "Slow stories": [
+  "Quiet Stories": [
+    "quiet",
+    "calm",
+    "still",
+    "gentle",
+    "soft",
+    "silent",
+    "peaceful",
+  ],
+  "Human Connection": [
+    "human",
+    "intimate",
+    "warm",
+    "tender",
+    "love",
+    "relationship",
+    "heart",
+    "connection",
+  ],
+  "Nostalgic Sounds": [
+    "nostalgic",
+    "melancholy",
+    "longing",
+    "memory",
+    "past",
+    "bittersweet",
+  ],
+  "Slow Living": [
     "slow",
     "reflective",
     "contemplative",
@@ -33,8 +59,23 @@ const TASTE_KEYWORDS: Record<string, string[]> = {
     "quiet",
     "still",
   ],
-  Curious: ["curious", "dreamlike", "surreal", "strange", "mystery", "wonder"],
-  Romantic: ["romantic", "romance", "passion", "warm"],
+  Curiosity: ["curious", "dreamlike", "surreal", "strange", "mystery", "wonder"],
+  Romance: ["romantic", "romance", "passion", "warm"],
+  Nature: ["nature", "forest", "ocean", "landscape", "earth", "green", "wind"],
+};
+
+const MOCK_DNA_TAGS: TasteTag[] = [
+  { label: "Quiet Stories", weight: 5 },
+  { label: "Human Connection", weight: 4 },
+  { label: "Slow Living", weight: 3 },
+  { label: "Nostalgic Sounds", weight: 3 },
+];
+
+const MOCK_PERSONA: MusePersona = {
+  title: "The Quiet Observer",
+  description:
+    "You are drawn to quiet stories, human relationships, and nostalgic sounds.",
+  confidence: 68,
 };
 
 const MONTH_NAMES = [
@@ -189,7 +230,7 @@ export function calculateTasteTags(
   contentTagsByKey: Record<string, string[]>,
 ): TasteTag[] {
   const tokens = collectTasteTokens(items, journalEntries, contentTagsByKey);
-  if (tokens.length === 0) return [];
+  if (tokens.length === 0) return MOCK_DNA_TAGS;
 
   const blob = tokens.join(" ").toLowerCase();
   const weights = new Map<string, number>();
@@ -212,9 +253,158 @@ export function calculateTasteTags(
     });
 
   const totalWeight = ranked.reduce((sum, tag) => sum + tag.weight, 0);
-  if (totalWeight < 2) return [];
+  if (totalWeight < 2) return MOCK_DNA_TAGS;
 
   return ranked.slice(0, 5);
+}
+
+export function calculateCulturalDna(
+  items: LibraryItem[],
+  journalEntries: MediaItem[],
+  contentTagsByKey: Record<string, string[]>,
+): TasteTag[] {
+  return calculateTasteTags(items, journalEntries, contentTagsByKey).slice(0, 5);
+}
+
+export function calculateMusePersona(tags: TasteTag[]): MusePersona {
+  if (tags.length === 0) return { ...MOCK_PERSONA, confidence: 62 };
+
+  const labels = tags.map((tag) => tag.label);
+  const primary = labels[0] ?? "Quiet Stories";
+  const secondary = labels[1] ?? "Human Connection";
+  const tertiary = labels[2] ?? "Nostalgic Sounds";
+  const totalWeight = tags.reduce((sum, tag) => sum + tag.weight, 0);
+
+  let title = "The Quiet Observer";
+  if (primary.includes("Quiet") || primary.includes("Slow")) {
+    title = "The Quiet Observer";
+  } else if (primary.includes("Curious")) {
+    title = "The Curious Wanderer";
+  } else if (primary.includes("Nostalgic")) {
+    title = "The Memory Keeper";
+  } else if (primary.includes("Human") || primary.includes("Romance")) {
+    title = "The Intimate Observer";
+  } else if (primary.includes("Nature")) {
+    title = "The Soft Landscape Listener";
+  } else {
+    title = "The Reflective Explorer";
+  }
+
+  const confidence = Math.min(
+    94,
+    Math.max(58, 54 + totalWeight * 4 + tags.length * 3),
+  );
+
+  return {
+    title,
+    description: `You are drawn to ${primary.toLowerCase()}, ${secondary.toLowerCase()}, and ${tertiary.toLowerCase()}.`,
+    confidence,
+  };
+}
+
+export function calculateMemoryHighlights(
+  journalEntries: MediaItem[],
+  limit = 4,
+): MemoryHighlight[] {
+  const candidates = journalEntries
+    .filter((entry) => Boolean(entry.note?.trim() || entry.quote?.trim()))
+    .sort((left, right) =>
+      entryDate(right).localeCompare(entryDate(left)),
+    );
+
+  const highlights = candidates.slice(0, limit).map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    creator: entry.creator,
+    date: entryDate(entry),
+    excerpt:
+      entry.note?.trim() ||
+      entry.quote?.trim() ||
+      "A quiet memory kept in your journal.",
+    journalItem: entry,
+  }));
+
+  if (highlights.length > 0) return highlights;
+
+  return [
+    {
+      id: "mock-memory-1",
+      title: "Norwegian Wood",
+      creator: "Haruki Murakami",
+      date: "2026-07-12",
+      excerpt: "A quiet journey about loneliness and connection.",
+      journalItem: {
+        id: "mock-memory-1",
+        type: "book",
+        title: "Norwegian Wood",
+        creator: "Haruki Murakami",
+        cover: "from-emerald-900 via-teal-950 to-slate-950",
+        date: "2026-07-12",
+        startDate: "2026-07-01",
+        endDate: "2026-07-12",
+        status: "FINISHED",
+        note: "A quiet journey about loneliness and connection.",
+        quote: "",
+        rating: 5,
+        tags: ["quiet", "memory"],
+      },
+    },
+  ];
+}
+
+export function calculateTasteTimelineMoments(
+  timeline: ProfileTimelineYear[],
+): TasteTimelineMoment[] {
+  const moments: TasteTimelineMoment[] = [];
+
+  for (const yearGroup of timeline) {
+    for (const monthGroup of yearGroup.months) {
+      const books = monthGroup.entries.filter(
+        (entry) => entry.journalItem.type === "book",
+      ).length;
+      const movies = monthGroup.entries.filter(
+        (entry) => entry.journalItem.type === "movie",
+      ).length;
+      const music = monthGroup.entries.filter(
+        (entry) => entry.journalItem.type === "music",
+      ).length;
+
+      let insight = "A quiet stretch of cultural moments";
+      const dominant = Math.max(books, movies, music);
+
+      if (dominant === 0) {
+        insight = "Saved something for later";
+      } else if (books === dominant) {
+        insight = books > 1 ? "Books deepened this month" : "A book shaped the month";
+      } else if (movies === dominant) {
+        insight =
+          movies > 1 ? "Films left a stronger mark" : "A film changed the mood";
+      } else {
+        insight =
+          music > 1 ? "Music mood shifted" : "A soundtrack found you";
+      }
+
+      moments.push({
+        id: `${yearGroup.year}-${monthGroup.month}`,
+        year: yearGroup.year,
+        month: monthGroup.month,
+        insight,
+        entryCount: monthGroup.entries.length,
+      });
+    }
+  }
+
+  if (moments.length > 0) return moments.slice(0, 8);
+
+  return [
+    {
+      id: "mock-2026-july",
+      year: "2026",
+      month: "July",
+      insight: "Books deepened · Music mood shifted",
+      entryCount: 3,
+    },
+  ];
 }
 
 export function calculateFavorites(items: LibraryItem[]): ProfileFavorite[] {

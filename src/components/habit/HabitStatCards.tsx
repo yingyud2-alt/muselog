@@ -3,8 +3,13 @@
 import { useMemo, useState } from "react";
 
 import { HabitDetailSheet } from "@/components/habit/HabitDetailSheet";
+import { MonthlyRhythmPanel } from "@/components/journal/monthly-rhythm-panel";
 import { buildActivityDotMatrix } from "@/lib/habit/habit-matrix-utils";
 import { useHabitLogs } from "@/lib/habit/habit-store";
+import {
+  museActivityToRhythmType,
+  type RhythmPanelType,
+} from "@/lib/journal/rhythm-panel-utils";
 import type { MuseActivity } from "@/types/habit";
 import { cn } from "@/lib/utils";
 
@@ -27,21 +32,21 @@ const HABIT_CARDS: HabitCardConfig[] = [
     activity: "read",
     label: "Reading",
     emoji: "📖",
-    filledClass: "bg-teal-400/50",
+    filledClass: "var(--journal-activity-1, rgba(45,212,191,0.5))",
     emptyClass: "bg-white/[0.07]",
   },
   {
     activity: "watch",
     label: "Watching",
     emoji: "🎬",
-    filledClass: "bg-amber-400/45",
+    filledClass: "var(--journal-activity-2, rgba(251,191,36,0.45))",
     emptyClass: "bg-white/[0.07]",
   },
   {
     activity: "listen",
     label: "Listening",
     emoji: "🎵",
-    filledClass: "bg-lime-600/40",
+    filledClass: "var(--journal-activity-3, rgba(132,204,22,0.4))",
     emptyClass: "bg-white/[0.07]",
   },
 ];
@@ -56,17 +61,19 @@ function DotMatrix({
   emptyClass: string;
 }) {
   return (
-    <div
-      className="grid grid-cols-10 gap-[3px]"
-      aria-hidden="true"
-    >
+    <div className="grid grid-cols-10 gap-[3px]" aria-hidden="true">
       {dots.map((filled, index) => (
         <span
           key={index}
           className={cn(
             "size-[5px] rounded-full md:size-1.5",
-            filled ? filledClass : emptyClass,
+            !filled && emptyClass,
           )}
+          style={
+            filled
+              ? { backgroundColor: filledClass }
+              : undefined
+          }
         />
       ))}
     </div>
@@ -136,6 +143,10 @@ export function HabitStatCards({ year, month, className }: HabitStatCardsProps) 
     [logs, year, month],
   );
 
+  const rhythmType: RhythmPanelType | null = selectedActivity
+    ? museActivityToRhythmType(selectedActivity)
+    : null;
+
   return (
     <>
       <section className={className}>
@@ -155,10 +166,19 @@ export function HabitStatCards({ year, month, className }: HabitStatCardsProps) 
         </div>
       </section>
 
-      <HabitDetailSheet
-        activity={selectedActivity}
-        year={year}
-        month={month}
+      {/* Mobile: keep existing bottom sheet */}
+      <div className="md:hidden">
+        <HabitDetailSheet
+          activity={selectedActivity}
+          year={year}
+          month={month}
+          onClose={() => setSelectedActivity(null)}
+        />
+      </div>
+
+      {/* Desktop: immersive monthly floating panel */}
+      <MonthlyRhythmPanel
+        type={rhythmType}
         onClose={() => setSelectedActivity(null)}
       />
     </>

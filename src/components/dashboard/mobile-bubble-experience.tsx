@@ -10,8 +10,11 @@ import {
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 
+import { openBubblePreview } from "@/lib/work/open-bubble-preview";
 import { getWorkBubblesForContainer, type WorkBubble } from "./mood-bubble-data";
 import { MobileFeaturedBubbleContent } from "./mobile-bubble-content";
+import { BubbleAiMoodLabel } from "./bubble-ai-mood-label";
+import { BubbleMemoryIndicator } from "./bubble-memory-indicator";
 import {
   clampMobileBubbleCenter,
   computeMobileFocusOffsets,
@@ -28,7 +31,7 @@ import {
   type FocusCluster,
   type PlacedBubble,
 } from "./mood-bubble-layout";
-import { MediaIcon, RecommendationModal } from "./mood-bubble-shared";
+import { MediaIcon } from "./mood-bubble-shared";
 import {
   getBubbleBackground,
   getBubbleBorder,
@@ -36,6 +39,7 @@ import {
   getBubbleVisualState,
   MOONLIGHT_GRADIENT,
   PAPER_NOISE_DATA_URL,
+  PAPER_NOISE_OPACITY,
   TEXT_COLORS,
 } from "./mood-bubble-visual";
 import { cn } from "@/lib/utils";
@@ -121,11 +125,8 @@ function LockedFocusedBubble({
         )}
         style={{
           border: bubbleBorder,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
           background: bubbleBackground,
           boxShadow: bubbleGlow,
-          filter: "brightness(1.08)",
           overflow: "visible",
           touchAction: "none",
         }}
@@ -134,11 +135,12 @@ function LockedFocusedBubble({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
-            opacity: 0.03,
+            opacity: PAPER_NOISE_OPACITY,
             backgroundImage: PAPER_NOISE_DATA_URL,
-            mixBlendMode: "overlay",
+            mixBlendMode: "soft-light",
           }}
         />
+        <BubbleMemoryIndicator work={bubble} />
         <div className="pointer-events-none">
           <MobileFeaturedBubbleContent
             work={bubble}
@@ -204,8 +206,6 @@ function IdleBubble({
       className="pointer-events-none absolute flex items-center justify-center rounded-full text-white"
       style={{
         border: bubbleBorder,
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
         zIndex: isFeatured ? 16 : 10,
         overflow: "hidden",
       }}
@@ -247,11 +247,12 @@ function IdleBubble({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 rounded-full"
         style={{
-          opacity: 0.03,
+          opacity: PAPER_NOISE_OPACITY,
           backgroundImage: PAPER_NOISE_DATA_URL,
-          mixBlendMode: "overlay",
+          mixBlendMode: "soft-light",
         }}
       />
+      <BubbleMemoryIndicator work={bubble} />
       {showFocusContent ? (
         <MobileFeaturedBubbleContent
           work={bubble}
@@ -297,7 +298,6 @@ export function MobileBubbleExperience() {
   const [mobileFocusedId, setMobileFocusedId] = useState<number | null>(null);
   const [gesturePhase, setGesturePhase] = useState<GesturePhase>("idle");
   const [offsets, setOffsets] = useState<Map<number, BubbleOffset>>(new Map());
-  const [selected, setSelected] = useState<WorkBubble | null>(null);
 
   const isMobileFocusLocked = gesturePhase === "locked";
   const isDraggingFocus = gesturePhase === "dragging";
@@ -416,7 +416,7 @@ export function MobileBubbleExperience() {
 
   const openWorkModal = useCallback(
     (work: WorkBubble) => {
-      setSelected(work);
+      openBubblePreview(work);
       requestAnimationFrame(() => {
         clearMobileFocus();
       });
@@ -697,6 +697,8 @@ export function MobileBubbleExperience() {
             style={{ background: MOONLIGHT_GRADIENT }}
           />
 
+          <BubbleAiMoodLabel className="font-display pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[10px] font-bold tracking-wide text-white/40 backdrop-blur-md" />
+
           {layout.map((bubble, index) => {
             const isActive = focusedIndex === index;
             const isFeatured = bubble.alwaysVisible;
@@ -731,12 +733,12 @@ export function MobileBubbleExperience() {
             const driftDuration = getMobileDriftDuration(bubble.id);
             const drift = getBubbleDrift(bubble.id);
 
-            let opacity = isFeatured ? 0.82 : 0.38;
+            let opacity = isFeatured ? 0.76 : 0.36;
 
             if (isActive && !isMobileFocusLocked) {
               opacity = 1;
             } else if (isFocusActive) {
-              opacity = isFeatured ? 0.4 : 0.3;
+              opacity = isFeatured ? 0.45 : 0.3;
             }
 
             const left = clamped.x - diameter / 2;
@@ -802,10 +804,6 @@ export function MobileBubbleExperience() {
         </div>
       </div>
 
-      <RecommendationModal
-        selected={selected}
-        onClose={() => setSelected(null)}
-      />
     </>
   );
 }

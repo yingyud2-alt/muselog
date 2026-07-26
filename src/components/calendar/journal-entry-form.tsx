@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { MemoryCover } from "@/components/calendar/memory-cover";
+import { MemoryColorPicker } from "@/components/calendar/memory-color-picker";
 import { JournalDatePicker } from "@/components/calendar/journal-date-picker";
 import { JourneyHighlightBar } from "@/components/calendar/JourneyHighlightBar";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/lib/calendar/journal-recommendations";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import type { ContentType } from "@/lib/content/types";
-import type { JourneyColor } from "@/types/media";
+import { TYPE_JOURNEY_COLORS, type JourneyColor } from "@/types/media";
 import { cn } from "@/lib/utils";
 
 export type JournalMediaSelection = {
@@ -42,9 +43,9 @@ export type JournalEntryDraft = {
 };
 
 const JOURNAL_TYPE_COLORS: Record<ContentType, JourneyColor> = {
-  BOOK: "teal",
-  MOVIE: "cyan",
-  MUSIC: "olive",
+  BOOK: TYPE_JOURNEY_COLORS.book,
+  MOVIE: TYPE_JOURNEY_COLORS.movie,
+  MUSIC: TYPE_JOURNEY_COLORS.music,
 };
 
 type JournalEntryFormProps = {
@@ -65,9 +66,12 @@ export function JournalEntryForm({
   const [startDate, setStartDate] = useState(initialStartDate);
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState<JournalEntryDraft["status"]>("ONGOING");
+  /** Per-memory journey color — independent of any global palette */
+  const [journeyColor, setJourneyColor] = useState<JourneyColor>(
+    JOURNAL_TYPE_COLORS[selection.type],
+  );
   const [note, setNote] = useState("");
 
-  const journeyColor = JOURNAL_TYPE_COLORS[selection.type];
   const cover = resolveSelectionCover(selection.mediaKey, selection.cover);
   const previewEnd =
     endDate && isValidDateString(endDate) ? endDate : startDate;
@@ -171,6 +175,12 @@ export function JournalEntryForm({
           </button>
         ))}
       </div>
+
+      <MemoryColorPicker
+        value={journeyColor}
+        onChange={setJourneyColor}
+        label="Journey Color"
+      />
 
       <label className="block space-y-1.5">
         <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">

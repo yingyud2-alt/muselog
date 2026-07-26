@@ -6,6 +6,7 @@ type StatusLabels = {
   ongoing: string;
   ongoingShort: string;
   finished: string;
+  dropped: string;
   startNow: string;
   again: string;
   completedRate: string;
@@ -18,6 +19,7 @@ const BOOK: StatusLabels = {
   ongoing: "Reading",
   ongoingShort: "Read",
   finished: "Finished",
+  dropped: "Dropped",
   startNow: "Start Reading",
   again: "Read Again",
   completedRate: "Mark as Read & Rate",
@@ -30,6 +32,7 @@ const MOVIE: StatusLabels = {
   ongoing: "Watching",
   ongoingShort: "Watch",
   finished: "Finished",
+  dropped: "Dropped",
   startNow: "Start Watching",
   again: "Watch Again",
   completedRate: "Mark as Watched & Rate",
@@ -42,6 +45,7 @@ const MUSIC: StatusLabels = {
   ongoing: "Listening",
   ongoingShort: "Listen",
   finished: "Finished",
+  dropped: "Dropped",
   startNow: "Start Listening",
   again: "Listen Again",
   completedRate: "Mark as Listened & Rate",
@@ -64,12 +68,13 @@ export function getLibraryStatusLabel(
 
   if (status === "WANT") return labels.want;
   if (status === "FINISHED") return labels.finished;
+  if (status === "DROPPED") return labels.dropped;
 
   if (status === "ONGOING") {
     if (typeof progress === "number" && progress > 0) {
       return `${labels.ongoing} · ${progress}%`;
     }
-    return "In progress";
+    return labels.ongoing;
   }
 
   return labels.want;

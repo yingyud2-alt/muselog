@@ -8,24 +8,23 @@ import {
   useState,
 } from "react";
 import { motion, useMotionValue } from "framer-motion";
-import {
-  BookOpen,
-  Film,
-  Headphones,
-  Mic,
-  Tv,
-  type LucideIcon,
-} from "lucide-react";
 
-import { getWorkBubblesForContainer, type MediaType, type WorkBubble } from "./mood-bubble-data";
+import { openBubblePreview } from "@/lib/work/open-bubble-preview";
+import { getWorkBubblesForContainer, type WorkBubble } from "./mood-bubble-data";
 import { MobileBubbleExperience } from "./mobile-bubble-experience";
-import { RecommendationModal } from "./mood-bubble-shared";
+import {
+  BubbleContent,
+  MediaIcon,
+} from "./mood-bubble-shared";
+import { BubbleAiMoodLabel } from "./bubble-ai-mood-label";
+import { BubbleMemoryIndicator } from "./bubble-memory-indicator";
 import { SurpriseMuseButton } from "./surprise-muse-button";
 import {
   applyDesktopBubbleFieldOffset,
   computeFocusOffsets,
   DESKTOP_BUBBLE_CANVAS_TOP,
   DESKTOP_BUBBLE_FIELD_OFFSET_Y,
+  DESKTOP_BUBBLE_BOTTOM_RESERVE,
   DESKTOP_BUBBLE_NAV_SAFE_Y,
   DESKTOP_FEATURED_SIZE_SCALE,
   findFocusCluster,
@@ -39,8 +38,6 @@ import {
 } from "./mood-bubble-layout";
 import {
   featuredStateToTextState,
-  getBubbleTypography,
-  getContentBox,
   getFeaturedTargetDiameter,
   getFeaturedVisualState,
   getIdleFeaturedDiameter,
@@ -53,6 +50,7 @@ import {
   getBubbleVisualState,
   MOONLIGHT_GRADIENT,
   PAPER_NOISE_DATA_URL,
+  PAPER_NOISE_OPACITY,
   TEXT_COLORS,
 } from "./mood-bubble-visual";
 import { cn } from "@/lib/utils";
@@ -75,14 +73,6 @@ type PointerState = {
   inside: boolean;
 };
 
-const MEDIA_ICONS: Record<MediaType, LucideIcon> = {
-  BOOK: BookOpen,
-  MOVIE: Film,
-  MUSIC: Headphones,
-  PODCAST: Mic,
-  TV: Tv,
-};
-
 function clustersEqual(
   left: FocusCluster,
   right: FocusCluster,
@@ -98,20 +88,6 @@ function clustersEqual(
   return left.neighborIndices.every(
     (index, position) => index === right.neighborIndices[position],
   );
-}
-
-function MediaIcon({
-  type,
-  className,
-  style,
-}: {
-  type: MediaType;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  const Icon = MEDIA_ICONS[type];
-
-  return <Icon className={className} style={style} aria-hidden="true" />;
 }
 
 function getTargetDiameter(
@@ -169,80 +145,6 @@ function getDesktopTargetDiameter(
   );
 }
 
-type BubbleContentProps = {
-  work: PlacedBubble;
-  state: BubbleTextState;
-  diameter: number;
-};
-
-function BubbleContent({ work, state, diameter }: BubbleContentProps) {
-  const typography = getBubbleTypography(diameter, state);
-  const contentBox = getContentBox(diameter, state);
-  const isFocused = state === "focused";
-
-  return (
-    <div className="pointer-events-none flex h-full w-full items-center justify-center overflow-hidden rounded-full">
-      <div
-        className="flex min-h-0 min-w-0 flex-col items-center justify-center text-center leading-snug"
-        style={{
-          width: contentBox.width,
-          maxHeight: contentBox.maxHeight,
-          margin: "auto",
-        }}
-      >
-        <p
-          className="w-full whitespace-normal uppercase"
-          style={{
-            fontSize: typography.type,
-            letterSpacing: typography.typeTracking,
-            lineHeight: 1.2,
-            color: TEXT_COLORS.type,
-            opacity: typography.typeOpacity,
-          }}
-        >
-          {work.type}
-        </p>
-        <p
-          className="w-full whitespace-normal break-words italic [overflow-wrap:anywhere]"
-          style={{
-            marginTop: typography.typeToQuoteGap,
-            fontSize: typography.quote,
-            lineHeight: typography.quoteLineHeight,
-            fontWeight: typography.quoteFontWeight,
-            color: isFocused ? TEXT_COLORS.quoteFocused : TEXT_COLORS.quote,
-            opacity: typography.quoteOpacity,
-            maxHeight:
-              typography.quote *
-              typography.quoteLineHeight *
-              typography.quoteMaxLines,
-            overflow: "hidden",
-          }}
-        >
-          &ldquo;{work.quote}&rdquo;
-        </p>
-        <p
-          className="w-full whitespace-normal break-words [overflow-wrap:anywhere]"
-          style={{
-            marginTop: typography.quoteToTitleGap,
-            fontSize: typography.title,
-            lineHeight: typography.titleLineHeight,
-            fontWeight: typography.titleFontWeight,
-            color: isFocused ? TEXT_COLORS.titleFocused : TEXT_COLORS.title,
-            opacity: typography.titleOpacity,
-            maxHeight:
-              typography.title *
-              typography.titleLineHeight *
-              typography.titleMaxLines,
-            overflow: "hidden",
-          }}
-        >
-          {work.title}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 type BubbleNodeProps = {
   bubble: PlacedBubble;
   index: number;
@@ -289,9 +191,10 @@ function BubbleNode({
 
   const isPrimaryFocused = isPrimary && pointerInside;
   const isFeatured = bubble.alwaysVisible;
-  const showFullContent = isFeatured || isPrimaryFocused;
-  const showIconOnly =
-    !isFeatured && isNeighbor && pointerInside && !isPrimaryFocused;
+  /** Featured idle + any hover-primary bubble reveal full editorial content */
+  const showExpandedContent = isFeatured || isPrimaryFocused;
+  /** Small / neighbor / far bubbles stay icon-only */
+  const showMinimalIcon = !showExpandedContent;
 
   const featuredVisualState = isFeatured
     ? getFeaturedVisualState(pointerInside, isPrimary, isNeighbor)
@@ -347,8 +250,6 @@ function BubbleNode({
       )}
       style={{
         border: bubbleBorder,
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
         zIndex,
         ...(isPrimary ? { x: nudgeX, y: nudgeY } : {}),
       }}
@@ -396,24 +297,32 @@ function BubbleNode({
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 rounded-full"
         style={{
-          opacity: 0.03,
+          opacity: PAPER_NOISE_OPACITY,
           backgroundImage: PAPER_NOISE_DATA_URL,
-          mixBlendMode: "overlay",
+          mixBlendMode: "soft-light",
         }}
       />
-      {showFullContent && (
+      <BubbleMemoryIndicator work={bubble} />
+      {showExpandedContent && (
         <BubbleContent
           work={bubble}
           state={contentState}
           diameter={targetDiameter}
+          showMood={isFeatured}
+          reveal={isPrimaryFocused && !isFeatured}
         />
       )}
 
-      {showIconOnly && (
+      {showMinimalIcon && (
         <MediaIcon
           type={bubble.type}
-          className="pointer-events-none size-3"
-          style={{ color: TEXT_COLORS.icon, opacity: 0.66 }}
+          className="pointer-events-none"
+          style={{
+            width: Math.max(11, Math.min(15, targetDiameter * 0.28)),
+            height: Math.max(11, Math.min(15, targetDiameter * 0.28)),
+            color: TEXT_COLORS.icon,
+            opacity: isNeighbor && pointerInside ? 0.66 : 0.52,
+          }}
         />
       )}
     </motion.button>
@@ -442,7 +351,6 @@ function DesktopBubbleHero() {
   const [cluster, setCluster] = useState<FocusCluster>(EMPTY_CLUSTER);
   const [offsets, setOffsets] = useState<Map<number, BubbleOffset>>(new Map());
   const [pointerInside, setPointerInside] = useState(false);
-  const [selected, setSelected] = useState<WorkBubble | null>(null);
 
   const primaryNudgeX = useMotionValue(0);
   const primaryNudgeY = useMotionValue(0);
@@ -530,8 +438,10 @@ function DesktopBubbleHero() {
       const rect = node.getBoundingClientRect();
       const width = Math.round(rect.width);
       const height = Math.max(
-        Math.round(rect.height) - DESKTOP_BUBBLE_CANVAS_TOP,
-        640,
+        Math.round(rect.height) -
+          DESKTOP_BUBBLE_CANVAS_TOP -
+          DESKTOP_BUBBLE_BOTTOM_RESERVE,
+        720,
       );
 
       if (
@@ -597,7 +507,7 @@ function DesktopBubbleHero() {
   };
 
   const handleSelect = (work: WorkBubble) => {
-    setSelected(work);
+    openBubblePreview(work);
   };
 
   const handlePointerEnter = (event: React.PointerEvent<HTMLElement>) => {
@@ -610,7 +520,7 @@ function DesktopBubbleHero() {
       onPointerEnter={handlePointerEnter}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative h-full min-h-[640px] w-full overflow-hidden"
+      className="relative h-[min(100svh,960px)] min-h-[820px] w-full overflow-hidden"
       style={{ paddingTop: DESKTOP_BUBBLE_CANVAS_TOP }}
     >
       <div
@@ -632,23 +542,26 @@ function DesktopBubbleHero() {
         />
       ))}
 
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="max-w-[380px] px-4 text-center">
+      <BubbleAiMoodLabel />
+
+      <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+        <div className="w-full max-w-[min(92vw,640px)] px-4 text-center md:max-w-[720px]">
           <h2
-            className="text-[34px] font-medium md:text-[36px] 2xl:text-[40px]"
+            className="font-hero text-[28px] font-medium sm:text-[32px] md:whitespace-nowrap md:text-[34px] xl:text-[36px] 2xl:text-[40px]"
             style={{
               color: TEXT_COLORS.heading,
               letterSpacing: "-0.025em",
               lineHeight: 1.08,
+              textShadow: "0 8px 32px rgba(13,17,23,0.55)",
             }}
           >
             What inspires you today?
           </h2>
           <p
-            className="text-[14px] font-normal md:text-[15px]"
+            className="font-display whitespace-nowrap text-[13px] font-normal md:text-[14px]"
             style={{
               color: TEXT_COLORS.subtitle,
-              marginTop: 13,
+              marginTop: 12,
             }}
           >
             Discover something that matches your mood
@@ -656,16 +569,12 @@ function DesktopBubbleHero() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center md:bottom-8">
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center md:bottom-10">
         <div className="pointer-events-auto">
           <SurpriseMuseButton />
         </div>
       </div>
 
-      <RecommendationModal
-        selected={selected}
-        onClose={() => setSelected(null)}
-      />
     </section>
   );
 }

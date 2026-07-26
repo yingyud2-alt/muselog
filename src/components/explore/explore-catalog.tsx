@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { ContentCard } from "@/components/explore/content-card";
 import { CuratedListCard } from "@/components/explore/curated-list-card";
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
+import { useReturnSnapshot } from "@/hooks/use-return-snapshot";
 import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import {
   contentMatchesExploreMood,
@@ -13,6 +15,10 @@ import {
 import { CURATED_LISTS } from "@/lib/content/curated-lists";
 import { useAllMemories } from "@/lib/content/memory-store";
 import type { ContentType } from "@/lib/content/types";
+import type { DiscoveryCategory } from "@/lib/content/explore-discovery";
+import { useExploreUiState } from "@/lib/explore/explore-ui-state";
+import { useMediaSearch } from "@/hooks/use-media-search";
+import type { ReturnContext } from "@/lib/navigation/return-context";
 import { cn } from "@/lib/utils";
 
 const TYPE_FILTERS: Array<{ value: "all" | ContentType; label: string }> = [
@@ -22,10 +28,68 @@ const TYPE_FILTERS: Array<{ value: "all" | ContentType; label: string }> = [
   { value: "MUSIC", label: "Music" },
 ];
 
+const VALID_MOODS = new Set<ExploreMood>(["quiet", "nostalgic", "curious"]);
+const VALID_TYPES = new Set<"all" | ContentType>([
+  "all",
+  "BOOK",
+  "MOVIE",
+  "MUSIC",
+]);
+const VALID_CATEGORIES = new Set<DiscoveryCategory>(["book", "film", "music"]);
+
 export function ExploreCatalog() {
-  const [exploreMood, setExploreMood] = useState<ExploreMood>("quiet");
-  const [typeFilter, setTypeFilter] = useState<"all" | ContentType>("all");
+  const {
+    exploreMood,
+    typeFilter,
+    category,
+    setExploreMood,
+    setTypeFilter,
+    patchExploreUi,
+  } = useExploreUiState();
+  const { query: searchQuery, setQuery } = useMediaSearch();
   const { memories } = useAllMemories();
+
+  const restoreExploreUi = useCallback(
+    (context: ReturnContext) => {
+      const explore = context.pageState?.explore;
+      if (!explore) return;
+
+      const nextMood = explore.exploreMood as ExploreMood | undefined;
+      const nextType = explore.typeFilter as ("all" | ContentType) | undefined;
+      const nextCategory = explore.category as DiscoveryCategory | undefined;
+
+      patchExploreUi({
+        ...(nextMood && VALID_MOODS.has(nextMood)
+          ? { exploreMood: nextMood }
+          : {}),
+        ...(nextType && VALID_TYPES.has(nextType)
+          ? { typeFilter: nextType }
+          : {}),
+        ...(nextCategory && VALID_CATEGORIES.has(nextCategory)
+          ? { category: nextCategory }
+          : {}),
+      });
+
+      if (typeof explore.searchQuery === "string") {
+        setQuery(explore.searchQuery);
+      }
+    },
+    [patchExploreUi, setQuery],
+  );
+
+  const exploreSnapshot = useMemo(
+    () => ({
+      explore: {
+        exploreMood,
+        typeFilter,
+        category,
+        searchQuery,
+      },
+    }),
+    [exploreMood, typeFilter, category, searchQuery],
+  );
+
+  useReturnSnapshot(exploreSnapshot, restoreExploreUi);
 
   const savedIds = useMemo(
     () => new Set(memories.map((memory) => memory.contentId)),
@@ -111,9 +175,12 @@ export function ExploreCatalog() {
         </div>
 
         {items.length === 0 ? (
-          <p className="text-sm text-white/45">
-            No works match this mood yet. Try another feeling.
-          </p>
+          <MuseEmptyState
+            title="No works match this mood yet."
+            description="Try another feeling — quiet, nostalgic, or curious worlds await."
+            actionLabel="Browse all moods"
+            actionHref="/explore"
+          />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((content) => (

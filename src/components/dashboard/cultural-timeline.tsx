@@ -39,7 +39,7 @@ export function CulturalTimeline({ entries, onSelect }: CulturalTimelineProps) {
       />
 
       <DashboardGlassCard className="overflow-hidden p-5 md:p-6">
-        <p className="text-xs uppercase tracking-[0.16em] text-white/35">
+        <p className="font-label text-xs uppercase tracking-[0.16em] text-white/35">
           {monthLabel} Journey
         </p>
 
@@ -71,7 +71,7 @@ export function CulturalTimeline({ entries, onSelect }: CulturalTimelineProps) {
                     aria-hidden="true"
                   />
 
-                  <p className="text-2xl font-light tabular-nums text-white/82">
+                  <p className="font-label text-2xl font-bold tabular-nums text-white/82">
                     {entry.dayOfMonth}
                   </p>
 
@@ -81,10 +81,10 @@ export function CulturalTimeline({ entries, onSelect }: CulturalTimelineProps) {
                     className="mt-3 w-full rounded-xl"
                   />
 
-                  <p className="mt-3 truncate text-sm font-medium text-white/85">
+                  <p className="font-display mt-3 truncate text-sm font-normal text-white/85">
                     {entry.title}
                   </p>
-                  <p className="mt-0.5 text-xs text-white/42">{entry.typeLabel}</p>
+                  <p className="font-label mt-0.5 text-xs text-white/42">{entry.typeLabel}</p>
                 </button>
               );
             })}

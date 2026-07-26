@@ -165,7 +165,7 @@ export function Sidebar() {
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/8 text-white/88">
                     <BookOpen className="size-4" aria-hidden="true" />
                   </div>
-                  <span className="text-lg font-semibold tracking-tight text-white/92">
+                  <span className="font-display text-lg font-bold tracking-tight text-white/92">
                     MuseLog
                   </span>
                 </div>
@@ -200,7 +200,7 @@ export function Sidebar() {
                       aria-current={active ? "page" : undefined}
                       onClick={closeDrawer}
                       className={cn(
-                        "flex h-12 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-medium transition-colors",
+                        "font-display flex h-12 items-center gap-3 rounded-2xl px-3.5 text-[15px] font-bold transition-colors",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
                         active
                           ? "bg-white/10 text-white"

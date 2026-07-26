@@ -1,19 +1,40 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  JetBrains_Mono,
+  Libre_Baskerville,
+  Lora,
+  Noto_Serif_SC,
+} from "next/font/google";
 
 import { NavigationWrapper } from "@/components/navigation/navigation-wrapper";
 import { MobileNavigation } from "@/components/mobile/MobileNavigation";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const libreBaskerville = Libre_Baskerville({
+  variable: "--font-libre-baskerville",
   subsets: ["latin"],
+  weight: "400",
+  style: "italic",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
+
+/** CJK fallback companion for Lora body text */
+const notoSerifSc = Noto_Serif_SC({
+  variable: "--font-noto-serif-sc",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -29,9 +50,9 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${lora.variable} ${libreBaskerville.variable} ${jetbrainsMono.variable} ${notoSerifSc.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-[#090A0F]">
+      <body className="min-h-full bg-[#090A0F] font-body">
         <NavigationWrapper>{children}</NavigationWrapper>
         <MobileNavigation />
       </body>

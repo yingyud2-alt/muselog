@@ -11,7 +11,8 @@ import {
 } from "@/lib/content/search";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 
-const SEARCH_EVENT = "muselog-search-updated";
+export const MEDIA_SEARCH_UPDATED_EVENT = "muselog-search-updated";
+const SEARCH_EVENT = MEDIA_SEARCH_UPDATED_EVENT;
 
 function subscribeSearchQuery(onStoreChange: () => void) {
   if (typeof window === "undefined") {

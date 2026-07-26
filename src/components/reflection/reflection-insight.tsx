@@ -8,7 +8,7 @@ export function ReflectionInsight({ reflection }: ReflectionInsightProps) {
   return (
     <section className="rounded-[24px] border border-teal-400/12 bg-gradient-to-br from-teal-950/25 via-white/[0.03] to-slate-950/30 p-5 backdrop-blur-sm md:p-6">
       <h2 className="text-sm font-medium text-teal-200/75">AI Insight</h2>
-      <p className="mt-4 text-base leading-relaxed text-white/82 md:text-lg">
+      <p className="font-body mt-4 text-base leading-relaxed text-white/82 md:text-lg">
         {reflection.summary}
       </p>
 
@@ -17,7 +17,7 @@ export function ReflectionInsight({ reflection }: ReflectionInsightProps) {
           {reflection.insights.map((insight) => (
             <li
               key={insight}
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-relaxed text-white/68"
+              className="font-body rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-relaxed text-white/68"
             >
               {insight}
             </li>

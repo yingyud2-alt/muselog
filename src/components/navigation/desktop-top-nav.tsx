@@ -43,7 +43,7 @@ export function DesktopTopNav() {
           <span className="flex size-7 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-white/75">
             <BookOpen className="size-3.5" aria-hidden="true" />
           </span>
-          <span className="hidden text-[13px] font-semibold tracking-tight text-white/82 sm:inline">
+          <span className="font-display hidden text-[13px] font-bold tracking-tight text-white/82 sm:inline">
             MuseLog
           </span>
         </Link>
@@ -58,7 +58,7 @@ export function DesktopTopNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all sm:px-3 sm:text-xs",
+                  "font-display shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold transition-all sm:px-3 sm:text-xs",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300/20",
                   active
                     ? "border border-teal-300/16 bg-teal-400/[0.07] text-white/88 shadow-[0_0_16px_rgba(72,140,130,0.1)]"

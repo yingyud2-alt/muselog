@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download, X } from "lucide-react";
 
@@ -11,7 +11,7 @@ import { MemoryCover } from "@/components/calendar/memory-cover";
 import { MemoryPhotoGallery } from "@/components/calendar/MemoryPhotoGallery";
 import { MemoryStars } from "@/components/calendar/memory-stars";
 import { TimelineEditor } from "@/components/calendar/TimelineEditor";
-import { MEDIA_STATUS_LABELS } from "@/lib/calendar/constants";
+import { MEDIA_STATUS_LABELS, MEDIA_TYPE_LABELS } from "@/lib/calendar/constants";
 import { downloadMediaCover } from "@/lib/calendar/download-cover";
 import {
   formatJourneyDay,
@@ -22,8 +22,13 @@ import {
 import { useMemoryPhotos } from "@/lib/calendar/memory-photos-store";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
-import { MEDIA_EXPLORE_IDS } from "@/types/media";
-import type { MediaItem, JourneyColor } from "@/types/media";
+import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
+import { workHrefForJournalItem } from "@/lib/work/work-route";
+import {
+  JOURNEY_COLOR_STYLES,
+  type JourneyColor,
+  type MediaItem,
+} from "@/types/media";
 import { cn } from "@/lib/utils";
 
 type MediaFloatingDetailProps = {
@@ -32,6 +37,7 @@ type MediaFloatingDetailProps = {
 };
 
 export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps) {
+  const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
   const { saveJourney } = useCalendarMedia();
   const { photos, addPhoto } = useMemoryPhotos(item?.id ?? null);
@@ -51,7 +57,7 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
     };
   }, [item, onClose]);
 
-  const exploreId = item ? MEDIA_EXPLORE_IDS[item.id] : undefined;
+  const workHref = item ? workHrefForJournalItem(item) : null;
 
   const closePanel = () => {
     setEditorOpen(false);
@@ -127,22 +133,25 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
               </button>
 
               <div className="mt-5 space-y-2 text-center">
-                <h2 className="text-xl font-semibold tracking-tight text-white/95">
+                <h2 className="font-display text-xl font-bold tracking-tight text-white/95">
                   {item.title}
                 </h2>
-                <p className="text-sm text-white/48">{item.creator}</p>
+                <p className="font-label text-sm text-white/48">{item.creator}</p>
+                <p className="font-label text-[10px] uppercase tracking-[0.14em] text-white/35">
+                  {MEDIA_TYPE_LABELS[item.type]}
+                </p>
                 {item.rating > 0 && (
                   <div className="flex justify-center">
                     <MemoryStars rating={item.rating} size="md" />
                   </div>
                 )}
-                <span className="inline-block rounded-full border border-white/12 px-3 py-0.5 text-xs text-white/55">
+                <span className="font-label inline-block rounded-full border border-white/12 px-3 py-0.5 text-xs text-white/55">
                   {MEDIA_STATUS_LABELS[item.status]}
                 </span>
               </div>
 
               <div className="mt-6 space-y-2">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">
+                <p className="font-label text-[10px] uppercase tracking-[0.12em] text-white/35">
                   Timeline
                 </p>
                 <JourneyHighlightBar color={getJourneyColor(item)} className="h-[3px]" />
@@ -151,6 +160,17 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
                   <span className="text-white/25">—</span>
                   <span>{formatJourneyDay(getJourneyEnd(item))}</span>
                 </div>
+                <p className="font-label flex items-center justify-center gap-2 pt-1 text-[11px] text-white/40">
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{
+                      backgroundColor:
+                        JOURNEY_COLOR_STYLES[getJourneyColor(item)].swatch,
+                    }}
+                    aria-hidden="true"
+                  />
+                  {JOURNEY_COLOR_STYLES[getJourneyColor(item)].label}
+                </p>
               </div>
 
               <JournalContent
@@ -176,31 +196,29 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
                   <Download className="size-3.5" aria-hidden="true" />
                   Download cover
                 </button>
-                {exploreId && (
-                  <Link
-                    href={`/explore/${exploreId}`}
+                {workHref && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      navigateToWorkDetail(
+                        router,
+                        workHref.replace(/^\/work\//, ""),
+                        { closeOverlays: false },
+                      );
+                    }}
                     className="flex w-full items-center justify-center rounded-full border border-white/10 py-2.5 text-sm text-white/55"
                   >
-                    View in Explore
-                  </Link>
+                    View Details →
+                  </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => setEditorOpen((o) => !o)}
+                  onClick={() => setEditorOpen(true)}
                   className="w-full rounded-full border border-white/10 py-2.5 text-sm text-white/45"
                 >
                   Edit timeline
                 </button>
-                {editorOpen && (
-                  <TimelineEditor
-                    key={`${item.id}-${getJourneyStart(item)}`}
-                    startDate={getJourneyStart(item)}
-                    endDate={getJourneyEnd(item)}
-                    journeyColor={getJourneyColor(item)}
-                    onSave={handleSaveJourney}
-                    onClose={() => setEditorOpen(false)}
-                  />
-                )}
               </div>
             </div>
           </motion.article>
@@ -219,15 +237,34 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
                 item={item}
                 photos={photos}
                 addPhoto={addPhoto}
-                editorOpen={editorOpen}
                 setEditorOpen={setEditorOpen}
-                exploreId={exploreId}
-                onSaveJourney={handleSaveJourney}
+                workHref={workHref}
                 onClose={closePanel}
+                onViewDetails={(href) => {
+                  closePanel();
+                  navigateToWorkDetail(
+                    router,
+                    href.replace(/^\/work\//, ""),
+                    { closeOverlays: false },
+                  );
+                }}
                 closeRef={closeRef}
               />
             </motion.article>
           </div>
+
+          <AnimatePresence>
+            {editorOpen ? (
+              <TimelineEditor
+                key={`${item.id}-timeline-editor`}
+                startDate={getJourneyStart(item)}
+                endDate={getJourneyEnd(item)}
+                journeyColor={getJourneyColor(item)}
+                onSave={handleSaveJourney}
+                onClose={() => setEditorOpen(false)}
+              />
+            ) : null}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -238,21 +275,19 @@ function DesktopDetailContent({
   item,
   photos,
   addPhoto,
-  editorOpen,
   setEditorOpen,
-  exploreId,
-  onSaveJourney,
+  workHref,
   onClose,
+  onViewDetails,
   closeRef,
 }: {
   item: MediaItem;
   photos: string[];
   addPhoto: (url: string) => void;
-  editorOpen: boolean;
   setEditorOpen: (v: boolean) => void;
-  exploreId: string | undefined;
-  onSaveJourney: (s: string, e: string, c: JourneyColor) => void;
+  workHref: string | null;
   onClose: () => void;
+  onViewDetails: (href: string) => void;
   closeRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
@@ -272,14 +307,30 @@ function DesktopDetailContent({
         </button>
       </div>
       <div className="min-w-0 flex-1 overflow-y-auto p-5 pr-6">
-        <h2 className="text-2xl font-semibold text-white/95">{item.title}</h2>
-        <p className="mt-1 text-sm text-white/50">{item.creator}</p>
+        <h2 className="font-display text-2xl font-bold text-white/95">{item.title}</h2>
+        <p className="font-label mt-1 text-sm text-white/50">{item.creator}</p>
+        <p className="font-label mt-1 text-[10px] uppercase tracking-[0.14em] text-white/35">
+          {MEDIA_TYPE_LABELS[item.type]}
+        </p>
         {item.rating > 0 && <MemoryStars rating={item.rating} size="md" className="mt-2" />}
+        <p className="font-label mt-2 inline-flex rounded-full border border-white/12 px-3 py-0.5 text-xs text-white/55">
+          {MEDIA_STATUS_LABELS[item.status]}
+        </p>
         <div className="mt-4 space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">Timeline</p>
+          <p className="font-label text-[10px] uppercase tracking-[0.12em] text-white/35">Timeline</p>
           <JourneyHighlightBar color={getJourneyColor(item)} className="h-[3px]" />
           <p className="text-sm text-white/62">
             {formatJourneyDay(getJourneyStart(item))} — {formatJourneyDay(getJourneyEnd(item))}
+          </p>
+          <p className="font-label flex items-center gap-2 text-[11px] text-white/40">
+            <span
+              className="size-2.5 rounded-full"
+              style={{
+                backgroundColor: JOURNEY_COLOR_STYLES[getJourneyColor(item)].swatch,
+              }}
+              aria-hidden="true"
+            />
+            Memory color · {JOURNEY_COLOR_STYLES[getJourneyColor(item)].label}
           </p>
         </div>
         <JournalContent note={item.note} quote={item.quote} tags={item.tags ?? []} className="mt-5 space-y-4" />
@@ -291,23 +342,22 @@ function DesktopDetailContent({
         >
           <Download className="size-3.5" /> Download cover
         </button>
-        {exploreId && (
-          <Link href={`/explore/${exploreId}`} className="mt-2 flex w-full justify-center rounded-full border border-white/10 py-2.5 text-sm text-white/55">
-            View in Explore
-          </Link>
+        {workHref && (
+          <button
+            type="button"
+            onClick={() => onViewDetails(workHref)}
+            className="mt-2 flex w-full justify-center rounded-full border border-white/10 py-2.5 text-sm text-white/55"
+          >
+            View Details →
+          </button>
         )}
-        <button type="button" onClick={() => setEditorOpen(!editorOpen)} className="mt-2 w-full rounded-full border border-white/10 py-2.5 text-sm text-white/45">
+        <button
+          type="button"
+          onClick={() => setEditorOpen(true)}
+          className="mt-2 w-full rounded-full border border-white/10 py-2.5 text-sm text-white/45"
+        >
           Edit timeline
         </button>
-        {editorOpen && (
-          <TimelineEditor
-            startDate={getJourneyStart(item)}
-            endDate={getJourneyEnd(item)}
-            journeyColor={getJourneyColor(item)}
-            onSave={onSaveJourney}
-            onClose={() => setEditorOpen(false)}
-          />
-        )}
       </div>
     </>
   );

@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-
 import { ContentCoverImage } from "@/components/explore/content-cover";
 import { getContentsByIds } from "@/lib/content/content-data";
+import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
 import type { CuratedList } from "@/lib/content/types";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +36,13 @@ export function CuratedListCard({ list }: CuratedListCardProps) {
         <ul className="space-y-1.5 border-t border-white/8 pt-3">
           {previewItems.map((item) => (
             <li key={item.id}>
-              <Link
-                href={`/explore/${item.id}`}
-                className="text-sm text-white/62 transition-colors hover:text-white/88"
+              <button
+                type="button"
+                onClick={() => openWorkDetail(item.id)}
+                className="text-left text-sm text-white/62 transition-colors hover:text-white/88"
               >
                 {item.title}
-              </Link>
+              </button>
             </li>
           ))}
         </ul>

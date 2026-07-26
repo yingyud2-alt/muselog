@@ -1,33 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { useMemo } from "react";
 
+import { CategoryExplorer } from "@/components/explore/category-explorer";
 import { ContentCoverImage } from "@/components/explore/content-cover";
 import { SearchBar } from "@/components/explore/search-bar";
+import { WorkStatusActions } from "@/components/work-status-actions";
 import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import {
   contentMatchesExploreMood,
   EXPLORE_MOODS,
-  type ExploreMood,
 } from "@/lib/content/constants";
-import { upsertMemory } from "@/lib/content/memory-store";
 import type { Content } from "@/lib/content/types";
+import { useExploreUiState } from "@/lib/explore/explore-ui-state";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 import { cn } from "@/lib/utils";
 
 function MobileExploreCard({ content }: { content: Content }) {
-  const router = useRouter();
   const reasonTags = content.tags.slice(0, 2).join(" / ");
-
-  const handleAdd = () => {
-    upsertMemory({
-      contentId: content.id,
-      status: "WANT",
-    });
-    router.push(`/explore/${content.id}`);
-  };
 
   return (
     <article className="overflow-hidden rounded-[22px] border border-white/[0.08] bg-white/[0.035] shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-md">
@@ -46,21 +36,21 @@ function MobileExploreCard({ content }: { content: Content }) {
           <span className="italic text-white/68">{reasonTags}</span>
         </p>
 
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="flex w-full items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.04] py-2.5 text-sm text-white/82 transition-colors hover:bg-white/10"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add to MuseLog
-        </button>
+        <WorkStatusActions
+          workId={content.id}
+          type={content.type}
+          title={content.title}
+          creator={content.creator}
+          cover={content.cover}
+          variant="compact"
+        />
       </div>
     </article>
   );
 }
 
 export function MobileExplore() {
-  const [exploreMood, setExploreMood] = useState<ExploreMood>("quiet");
+  const { exploreMood, setExploreMood } = useExploreUiState();
 
   const items = useMemo(() => {
     return CONTENT_CATALOG.filter((item) =>
@@ -109,6 +99,10 @@ export function MobileExplore() {
         {items.map((content) => (
           <MobileExploreCard key={content.id} content={content} />
         ))}
+      </div>
+
+      <div className="mt-12 border-t border-white/[0.06] pt-8">
+        <CategoryExplorer />
       </div>
     </div>
   );

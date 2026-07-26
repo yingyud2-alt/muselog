@@ -1,6 +1,7 @@
 "use client";
 
 import { MemoryCover } from "@/components/calendar/memory-cover";
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import type { Content } from "@/lib/content/types";
 import { cn } from "@/lib/utils";
 
@@ -14,23 +15,19 @@ type JournalWaitingListProps = {
 export function JournalWaitingList({
   items,
   onAdd,
-  emptyMessage = "No saved titles found.",
+  emptyMessage = "No memories waiting here yet.",
   onAddManually,
 }: JournalWaitingListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-8 text-center">
-        <p className="text-sm text-white/42">{emptyMessage}</p>
-        {onAddManually && (
-          <button
-            type="button"
-            onClick={onAddManually}
-            className="mt-4 text-sm text-teal-300/70 hover:text-teal-300/90"
-          >
-            Add manually
-          </button>
-        )}
-      </div>
+      <MuseEmptyState
+        title="No memories yet."
+        description={emptyMessage}
+        actionLabel={onAddManually ? "Add manually" : "Explore titles"}
+        actionHref={onAddManually ? undefined : "/explore"}
+        onAction={onAddManually}
+        className="py-8"
+      />
     );
   }
 

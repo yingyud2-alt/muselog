@@ -11,10 +11,16 @@ import {
 } from "@/lib/content/bubble-content-bridge";
 import { removeMemory, upsertMemory } from "@/lib/content/memory-store";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
+import { ensureReflectiveExplorerDemoSeed } from "@/lib/demo/ensure-demo-seed";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
 import type { JourneyColor, MediaItem, MediaStatus } from "@/types/media";
 
-export type UserMediaStatus = "NONE" | "WANT" | "ONGOING" | "FINISHED";
+export type UserMediaStatus =
+  | "NONE"
+  | "WANT"
+  | "ONGOING"
+  | "FINISHED"
+  | "DROPPED";
 
 export interface UserMediaState {
   mediaKey: string;
@@ -72,6 +78,7 @@ function read(): Record<string, UserMediaState> {
 
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
+  ensureReflectiveExplorerDemoSeed();
   cached = read();
   initialized = true;
 }
@@ -162,7 +169,9 @@ function syncMemoryStoreByMediaKey(
       ? "WANT"
       : state.status === "ONGOING"
         ? "READING"
-        : "COMPLETED";
+        : state.status === "DROPPED"
+          ? "DROPPED"
+          : "COMPLETED";
 
   upsertMemory({
     contentId: mediaKey,

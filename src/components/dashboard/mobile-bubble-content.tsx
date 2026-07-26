@@ -1,9 +1,10 @@
 import type { WorkBubble } from "./mood-bubble-data";
+import { getBubbleEmotionalMeta } from "./bubble-emotional-meta";
 import { MediaIcon } from "./mood-bubble-shared";
-import { TEXT_COLORS } from "./mood-bubble-visual";
+import { BUBBLE_TEXT_COLORS, TEXT_COLORS } from "./mood-bubble-visual";
 
 type MobileBubbleContentProps = {
-  work: Pick<WorkBubble, "type" | "quote" | "title">;
+  work: Pick<WorkBubble, "type" | "quote" | "title" | "id" | "creator" | "tags" | "mood">;
   diameter: number;
   variant: "featured" | "focus";
 };
@@ -24,10 +25,11 @@ export function MobileFeaturedBubbleContent({
   const boxWidth = diameter * boxRatio;
   const boxMaxHeight = diameter * boxRatio;
   const iconSize = isFocus ? 20 : diameter >= 94 ? 13 : 11;
-  const typeSize = isFocus ? 8.5 : scaleFont(diameter, 7, 8);
-  const quoteSize = isFocus ? 14 : scaleFont(diameter, 10, 12);
+  const typeSize = isFocus ? 8 : scaleFont(diameter, 7, 8);
+  const quoteSize = isFocus ? 16 : scaleFont(diameter, 12, 14.5);
   const titleSize = isFocus ? 11 : scaleFont(diameter, 8, 10);
   const showIcon = isFocus || diameter >= 88;
+  const meta = getBubbleEmotionalMeta(work);
 
   return (
     <div
@@ -57,40 +59,33 @@ export function MobileFeaturedBubbleContent({
           />
         )}
         <p
-          className="w-full uppercase"
-          style={{
-            fontSize: typeSize,
-            letterSpacing: "0.14em",
-            lineHeight: 1.25,
-            color: TEXT_COLORS.type,
-            opacity: 0.5,
-          }}
-        >
-          {work.type}
-        </p>
-        <p
-          className="mt-1 w-full italic"
+          className="font-display mt-1 w-full"
           style={{
             fontSize: quoteSize,
-            lineHeight: 1.32,
-            fontWeight: 500,
-            color: isFocus ? TEXT_COLORS.quoteFocused : TEXT_COLORS.quote,
-            opacity: 0.94,
+            letterSpacing: "0.015em",
+            lineHeight: 1.36,
+            fontWeight: 700,
+            color: isFocus
+              ? BUBBLE_TEXT_COLORS.quoteFocused
+              : BUBBLE_TEXT_COLORS.quote,
+            opacity: 1,
             whiteSpace: "normal",
             overflowWrap: "break-word",
             wordBreak: "normal",
           }}
         >
-          &ldquo;{work.quote}&rdquo;
+          &ldquo;{(work.quote?.trim() || work.title)}&rdquo;
         </p>
         <p
-          className="mt-1.5 w-full"
+          className="font-display mt-1.5 w-full"
           style={{
             fontSize: titleSize,
             lineHeight: 1.3,
             fontWeight: 400,
-            color: isFocus ? TEXT_COLORS.titleFocused : TEXT_COLORS.title,
-            opacity: 0.78,
+            color: isFocus
+              ? BUBBLE_TEXT_COLORS.titleFocused
+              : BUBBLE_TEXT_COLORS.title,
+            opacity: 0.68,
             whiteSpace: "normal",
             overflowWrap: "break-word",
             wordBreak: "normal",
@@ -98,6 +93,33 @@ export function MobileFeaturedBubbleContent({
         >
           {work.title}
         </p>
+        {work.creator ? (
+          <p
+            className="font-display mt-0.5 w-full truncate"
+            style={{
+              fontSize: Math.max(7, titleSize - 1.5),
+              lineHeight: 1.2,
+              fontWeight: 400,
+              color: BUBBLE_TEXT_COLORS.subtitle,
+              opacity: isFocus ? 0.7 : 0.55,
+            }}
+          >
+            {work.creator}
+          </p>
+        ) : null}
+        {diameter >= 92 && (
+          <p
+            className="font-label mt-1 w-full capitalize"
+            style={{
+              fontSize: Math.max(7, typeSize - 0.5),
+              letterSpacing: "0.08em",
+              color: BUBBLE_TEXT_COLORS.subtitle,
+              opacity: 0.45,
+            }}
+          >
+            {meta.mood}
+          </p>
+        )}
       </div>
     </div>
   );

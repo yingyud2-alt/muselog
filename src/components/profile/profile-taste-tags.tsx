@@ -1,3 +1,4 @@
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import type { TasteTag } from "@/types/profile";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +12,13 @@ export function ProfileTasteTags({ tags }: ProfileTasteTagsProps) {
       <h2 className="text-sm font-medium text-white/62">Your taste</h2>
 
       {tags.length === 0 ? (
-        <p className="mt-4 text-sm leading-relaxed text-white/42">
-          Keep exploring to discover your taste.
-        </p>
+        <MuseEmptyState
+          title="Taste still forming."
+          description="Keep exploring to discover the patterns in your archive."
+          actionLabel="Explore titles"
+          actionHref="/explore"
+          className="mt-4"
+        />
       ) : (
         <ul className="mt-4 flex flex-wrap gap-2">
           {tags.map((tag) => (

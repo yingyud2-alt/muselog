@@ -11,6 +11,7 @@ import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getUserContentById } from "@/lib/content/user-content-store";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
+import { buildAiReflectionInput } from "@/lib/ai/build-ai-reflection-input";
 import { sortLibraryItems } from "@/lib/library/library-items";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 import {
@@ -76,7 +77,7 @@ function toDashboardTimelineEntry(
 
 export function useDesktopDashboard() {
   const reflectionData = useReflectionData();
-  const { allItems } = useLibraryItems();
+  const { allItems, allWorks } = useLibraryItems();
   const { entries: journalEntries } = useJournalEntries();
 
   const recentlyAdded = useMemo(() => {
@@ -108,7 +109,7 @@ export function useDesktopDashboard() {
 
     if (!hasActivity && allItems.length === 0) {
       return {
-        monthLabel: reflectionData.month,
+        monthLabel: reflectionData.monthYear,
         books: readingStats[0]?.value ?? 12,
         movies: readingStats[1]?.value ?? 8,
         listeningHours: readingStats[2]?.value ?? 24,
@@ -124,13 +125,13 @@ export function useDesktopDashboard() {
       .slice(0, 3);
 
     return {
-      monthLabel: reflectionData.month,
-      books: books || allItems.filter((item) => item.type === "BOOK").length,
-      movies: movies || allItems.filter((item) => item.type === "MOVIE").length,
-      listeningHours: music > 0 ? Math.max(music * 3, 1) : readingStats[2]?.value ?? 24,
+      monthLabel: reflectionData.monthYear,
+      books,
+      movies,
+      listeningHours: music > 0 ? Math.max(music * 3, 1) : 0,
       moods: moods.length > 0 ? moods : MOCK_MOODS,
     };
-  }, [allItems, reflectionData, tasteTags]);
+  }, [allItems.length, reflectionData, tasteTags]);
 
   const timelineEntries = useMemo(() => {
     if (reflectionData.journey.length > 0) {
@@ -155,6 +156,11 @@ export function useDesktopDashboard() {
     continueExploring[0]?.title ??
     "Norwegian Wood";
 
+  const aiReflectionInput = useMemo(
+    () => buildAiReflectionInput(allItems, journalEntries),
+    [allItems, journalEntries],
+  );
+
   return {
     journeyStats,
     timelineEntries,
@@ -163,5 +169,8 @@ export function useDesktopDashboard() {
     picks: aiPicks.slice(0, 5),
     likedTitle,
     recentlyAdded,
+    /** Canonical Work list for Home dashboard consumers. */
+    works: allWorks,
+    aiReflectionInput,
   };
 }

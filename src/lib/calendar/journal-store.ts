@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 import { sanitizeMediaItem } from "@/lib/calendar/journey-utils";
+import { ensureReflectiveExplorerDemoSeed } from "@/lib/demo/ensure-demo-seed";
 import type { MediaItem } from "@/types/media";
 
 const STORAGE_KEY = "muselog-journal-entries-v1";
@@ -29,6 +30,7 @@ function read(): MediaItem[] {
 
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
+  ensureReflectiveExplorerDemoSeed();
   cached = read();
   initialized = true;
 }

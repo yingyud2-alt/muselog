@@ -48,7 +48,7 @@ export function MonthSummary({
         {monthName} reflection
       </p>
 
-      <p className="mt-3 text-base italic leading-relaxed text-white/52 md:text-lg">
+      <p className="font-body mt-3 text-base leading-relaxed text-white/52 md:text-lg">
         {tagline}
       </p>
 

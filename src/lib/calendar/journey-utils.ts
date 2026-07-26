@@ -7,9 +7,11 @@ import {
 const DATE_STRING_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const LEGACY_JOURNEY_COLORS: Record<string, JourneyColor> = {
-  sage: "teal",
-  blue: "cyan",
-  "warm-gray": "amber",
+  cyan: "ocean",
+  amber: "beige",
+  olive: "sage",
+  blue: "ocean",
+  "warm-gray": "beige",
 };
 
 export function isValidDateString(value?: string | null): value is string {
@@ -76,11 +78,24 @@ export function sanitizeMediaItem(
     quote: raw.quote ?? "",
     note: raw.note ?? raw.notes ?? "",
     tags: Array.isArray(raw.tags) ? raw.tags : [],
-    duration: raw.duration,
+    duration:
+      typeof raw.durationMinutes === "number"
+        ? raw.durationMinutes
+        : raw.duration,
+    durationMinutes:
+      typeof raw.durationMinutes === "number"
+        ? raw.durationMinutes
+        : typeof raw.duration === "number"
+          ? raw.duration
+          : undefined,
     memories: Array.isArray(raw.memories) ? raw.memories : [],
     startDate: start,
     endDate: end !== start ? end : undefined,
-    journeyColor: normalizeJourneyColor(raw.journeyColor, fallbackColor),
+    journeyColor: normalizeJourneyColor(
+      raw.journeyColor ?? raw.color,
+      fallbackColor,
+    ),
+    color: normalizeJourneyColor(raw.journeyColor ?? raw.color, fallbackColor),
     moment: raw.moment,
   };
 }
@@ -113,7 +128,7 @@ export function dateHasJournalMedia(date: string, items: MediaItem[]): boolean {
 
 export function getJourneyColor(item: MediaItem): JourneyColor {
   return normalizeJourneyColor(
-    item.journeyColor,
+    item.journeyColor ?? item.color,
     TYPE_JOURNEY_COLORS[item.type],
   );
 }

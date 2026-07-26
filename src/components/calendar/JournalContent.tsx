@@ -18,7 +18,7 @@ export function JournalContent({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[11px] lowercase text-white/42"
+              className="font-label rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-[11px] lowercase text-white/42"
             >
               {tag}
             </span>
@@ -28,15 +28,17 @@ export function JournalContent({
 
       {note && (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-white/35">
+          <p className="font-label text-[10px] uppercase tracking-[0.12em] text-white/35">
             My thoughts
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-white/68">{note}</p>
+          <p className="font-body mt-2 text-sm leading-relaxed text-white/68">
+            {note}
+          </p>
         </div>
       )}
 
       {quote && (
-        <p className="text-sm italic leading-relaxed text-white/45">
+        <p className="font-quote text-sm italic leading-relaxed text-white/45">
           &ldquo;{quote}&rdquo;
         </p>
       )}

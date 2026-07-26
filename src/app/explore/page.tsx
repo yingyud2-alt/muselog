@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
-import { ExploreCatalog } from "@/components/explore/explore-catalog";
+import { AiCuratedSection } from "@/components/explore/ai-curated-section";
+import { CategoryExplorer } from "@/components/explore/category-explorer";
 import { ExploreSearchHydrator } from "@/components/explore/explore-search-hydrator";
 import { SearchBar } from "@/components/explore/search-bar";
 import { MobileExplore } from "@/components/mobile/MobileExplore";
@@ -12,27 +13,29 @@ export default function ExplorePage() {
         <MobileExplore />
       </div>
 
-      <div className="mx-auto hidden max-w-6xl px-6 py-8 pb-[calc(env(safe-area-inset-bottom)+32px)] md:block md:px-8 md:py-10">
+      <div className="mx-auto hidden max-w-6xl space-y-14 px-6 py-8 pb-[calc(env(safe-area-inset-bottom)+32px)] md:block md:px-8 md:py-10">
         <Suspense fallback={null}>
           <ExploreSearchHydrator />
         </Suspense>
 
-        <header className="mb-10 max-w-2xl">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-white/38">
+        <header className="max-w-2xl">
+          <p className="font-label text-[11px] uppercase tracking-[0.16em] text-white/38">
             Explore
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white/95 md:text-4xl">
+          <h1 className="font-hero mt-2 text-3xl font-medium tracking-tight text-white/95 md:text-4xl">
             Discover something that matches your feeling.
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-white/48 md:text-base">
+          <p className="font-display mt-3 text-sm leading-relaxed text-white/48 md:text-base">
             Browse books, films, and music — then save what resonates to your
             personal MuseLog.
           </p>
         </header>
 
-        <SearchBar className="mb-8 max-w-2xl" />
+        <SearchBar className="max-w-2xl" />
 
-        <ExploreCatalog />
+        <AiCuratedSection />
+
+        <CategoryExplorer />
       </div>
     </main>
   );

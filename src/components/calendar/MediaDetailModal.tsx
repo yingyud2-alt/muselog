@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -11,7 +11,8 @@ import {
   MEDIA_TYPE_LABELS,
 } from "@/lib/calendar/constants";
 import { formatCardDate } from "@/lib/calendar/utils";
-import { MEDIA_EXPLORE_IDS } from "@/types/media";
+import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
+import { workHrefForJournalItem } from "@/lib/work/work-route";
 import type { MediaItem } from "@/types/media";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +26,8 @@ type MediaDetailModalProps = {
 };
 
 function ModalActions({ item }: { item: MediaItem }) {
-  const exploreId = MEDIA_EXPLORE_IDS[item.id];
+  const router = useRouter();
+  const workHref = workHrefForJournalItem(item);
 
   return (
     <div className="flex gap-2 pt-2">
@@ -35,20 +37,27 @@ function ModalActions({ item }: { item: MediaItem }) {
       >
         Edit memory
       </button>
-      {exploreId ? (
-        <Link
-          href={`/explore/${exploreId}`}
+      {workHref ? (
+        <button
+          type="button"
+          onClick={() =>
+            navigateToWorkDetail(
+              router,
+              workHref.replace(/^\/work\//, ""),
+              { closeOverlays: false },
+            )
+          }
           className="flex flex-1 items-center justify-center rounded-full bg-white/92 py-2.5 text-sm font-medium text-black transition-colors hover:bg-white"
         >
-          View detail
-        </Link>
+          View Details →
+        </button>
       ) : (
         <button
           type="button"
           disabled
           className="flex-1 rounded-full bg-white/15 py-2.5 text-sm text-white/35"
         >
-          View detail
+          View Details →
         </button>
       )}
     </div>
@@ -58,26 +67,26 @@ function ModalActions({ item }: { item: MediaItem }) {
 function DetailHeader({ item }: { item: MediaItem }) {
   return (
     <header className="space-y-3">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-white/42">
+      <div className="font-label flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-white/42">
         <CalendarMediaIcon type={item.type} className="size-3.5" />
         <span>{MEDIA_TYPE_LABELS[item.type]}</span>
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold tracking-tight text-white/95 md:text-[1.65rem]">
+        <h2 className="font-display text-2xl font-bold tracking-tight text-white/95 md:text-[1.65rem]">
           {item.title}
         </h2>
-        <p className="mt-1 text-sm text-white/50">{item.creator}</p>
+        <p className="font-label mt-1 text-sm text-white/50">{item.creator}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <MemoryStars rating={item.rating} size="md" />
-        <span className="rounded-full border border-white/12 px-3 py-0.5 text-xs text-white/55">
+        <span className="font-label rounded-full border border-white/12 px-3 py-0.5 text-xs text-white/55">
           {MEDIA_STATUS_LABELS[item.status]}
         </span>
       </div>
 
-      <p className="text-xs text-white/32">
+      <p className="font-label text-xs text-white/32">
         {formatCardDate(item.date)}
         {item.moment ? ` · ${item.moment}` : ""}
       </p>

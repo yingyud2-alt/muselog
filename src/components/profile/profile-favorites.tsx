@@ -2,6 +2,7 @@
 
 import { MemoryCover } from "@/components/calendar/memory-cover";
 import { MemoryStars } from "@/components/calendar/memory-stars";
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import type { ProfileFavorite } from "@/types/profile";
 
 type ProfileFavoritesProps = {
@@ -15,9 +16,13 @@ export function ProfileFavorites({ favorites, onSelect }: ProfileFavoritesProps)
       <h2 className="text-sm font-medium text-white/62">Highest Rated</h2>
 
       {favorites.length === 0 ? (
-        <p className="mt-4 text-sm text-white/42">
-          Rate finished works to see your favorites here.
-        </p>
+        <MuseEmptyState
+          title="No rated memories yet."
+          description="Finish and rate a work to see your favorites here."
+          actionLabel="Open Library"
+          actionHref="/library"
+          className="mt-4"
+        />
       ) : (
         <ul className="mt-4 space-y-3">
           {favorites.map((item) => (

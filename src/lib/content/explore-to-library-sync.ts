@@ -9,6 +9,7 @@ function memoryStatusToUser(status: Memory["status"]): UserMediaStatus {
   if (status === "WANT") return "WANT";
   if (status === "READING") return "ONGOING";
   if (status === "COMPLETED") return "FINISHED";
+  if (status === "DROPPED") return "DROPPED";
   return "NONE";
 }
 

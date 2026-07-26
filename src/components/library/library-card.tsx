@@ -1,10 +1,10 @@
 "use client";
 
 import { MemoryStars } from "@/components/calendar/memory-stars";
+import { LibraryArchiveCover } from "@/components/library/library-archive-cover";
 import {
   getLibraryLabels,
   getLibraryStatusLabel,
-  PROGRESS_COLORS,
 } from "@/lib/library/library-labels";
 import type { LibraryItem } from "@/lib/library/library-types";
 import { cn } from "@/lib/utils";
@@ -29,15 +29,12 @@ export function LibraryCard({ item, onSelect }: LibraryCardProps) {
       onClick={() => onSelect(item)}
       className="group w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
     >
-      <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] transition-transform duration-300 group-hover:-translate-y-0.5">
-        <div
-          className={cn(
-            "relative aspect-[2/3] w-full overflow-hidden bg-gradient-to-br ring-1 ring-white/10",
-            item.cover,
-          )}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-white/5" />
-        </div>
+      <div className="overflow-hidden rounded-[16px] border border-white/[0.07] bg-[#0E141C] transition-transform duration-300 group-hover:-translate-y-0.5">
+        <LibraryArchiveCover
+          cover={item.cover}
+          title={item.title}
+          className="rounded-none"
+        />
 
         <div className="space-y-1.5 p-2.5 md:p-3">
           <h3 className="line-clamp-2 text-[13px] font-medium leading-snug text-white/88 md:text-sm">
@@ -57,9 +54,9 @@ export function LibraryCard({ item, onSelect }: LibraryCardProps) {
             item.progress > 0 ? (
             <div className="pt-1">
               <div className="mb-1 text-[10px] text-white/45">{statusLabel}</div>
-              <div className="h-[3px] overflow-hidden rounded-full bg-white/10">
+              <div className="h-[2px] overflow-hidden bg-white/10">
                 <div
-                  className={cn("h-full rounded-full", PROGRESS_COLORS[item.type])}
+                  className={cn("h-full bg-[#6D8FA3]")}
                   style={{ width: `${item.progress}%` }}
                 />
               </div>

@@ -36,11 +36,11 @@ export function DashboardSectionHeader({
   return (
     <div className="flex items-end justify-between gap-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-medium tracking-tight text-white/88">
+        <h2 className="font-display text-lg font-bold tracking-tight text-white/88">
           {title}
         </h2>
         {description ? (
-          <p className="text-sm text-white/42">{description}</p>
+          <p className="font-display text-sm text-white/42">{description}</p>
         ) : null}
       </div>
       {action}

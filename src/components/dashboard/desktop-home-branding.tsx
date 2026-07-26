@@ -7,10 +7,10 @@ export function DesktopHomeBranding() {
         <BookOpen className="size-4" aria-hidden="true" />
       </div>
       <div>
-        <p className="text-sm font-semibold tracking-tight text-white/90">
+        <p className="font-display text-sm font-bold tracking-tight text-white/90">
           MuseLog
         </p>
-        <p className="text-[11px] text-white/42">Your journey, your Muse.</p>
+        <p className="font-display text-[11px] text-white/42">Your journey, your Muse.</p>
       </div>
     </div>
   );

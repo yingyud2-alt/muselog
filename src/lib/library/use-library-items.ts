@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 
 import { useJournalEntries } from "@/lib/calendar/journal-store";
+import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
 import { useAllMemories } from "@/lib/content/memory-store";
 import { useUserMediaStateMap } from "@/lib/content/user-media-state";
 import {
@@ -16,6 +17,11 @@ import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
 } from "@/lib/library/library-types";
+import {
+  contentToWork,
+  libraryItemToWork,
+  mergeWorks,
+} from "@/lib/work/work-adapters";
 
 type UseLibraryItemsOptions = {
   query?: string;
@@ -24,6 +30,10 @@ type UseLibraryItemsOptions = {
   sort?: LibrarySort;
 };
 
+/**
+ * Library data hook — Work is the canonical model;
+ * LibraryItem remains the UI view adapted from Work + local fields.
+ */
 export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
   const {
     query = "",
@@ -39,6 +49,25 @@ export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
   const allItems = useMemo(
     () => buildLibraryItems(stateMap, memories, journalEntries),
     [stateMap, memories, journalEntries],
+  );
+
+  const allWorks = useMemo(
+    () =>
+      allItems.map((item) => {
+        const catalog = getContentByMediaKey(item.mediaKey);
+        const fromLibrary = libraryItemToWork(item);
+        if (!catalog) return fromLibrary;
+        return mergeWorks(contentToWork(catalog), {
+          ...fromLibrary,
+          description: fromLibrary.description || catalog.description,
+          genres: catalog.tags,
+          moodTags:
+            fromLibrary.moodTags.length > 0
+              ? fromLibrary.moodTags
+              : catalog.tags.slice(0, 4),
+        });
+      }),
+    [allItems],
   );
 
   const stats = useMemo(() => computeLibraryStats(allItems), [allItems]);
@@ -59,5 +88,5 @@ export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
     [allItems],
   );
 
-  return { items, allItems, stats, getItemByKey };
+  return { items, allItems, allWorks, stats, getItemByKey };
 }

@@ -34,39 +34,39 @@ const FEATURED_EDITORIAL: Record<
   number,
   { x: number; y: number; tier: FeaturedTier }
 > = {
-  2: { x: 0.14, y: 0.13, tier: "hero" },
-  3: { x: 0.86, y: 0.12, tier: "hero" },
-  5: { x: 0.08, y: 0.4, tier: "medium" },
-  7: { x: 0.92, y: 0.38, tier: "medium" },
-  1: { x: 0.3, y: 0.27, tier: "medium" },
-  4: { x: 0.16, y: 0.62, tier: "small" },
-  8: { x: 0.8, y: 0.64, tier: "small" },
+  2: { x: 0.13, y: 0.2, tier: "hero" },
+  3: { x: 0.87, y: 0.19, tier: "hero" },
+  5: { x: 0.08, y: 0.44, tier: "medium" },
+  7: { x: 0.92, y: 0.42, tier: "medium" },
+  1: { x: 0.24, y: 0.34, tier: "medium" },
+  4: { x: 0.15, y: 0.7, tier: "small" },
+  8: { x: 0.85, y: 0.72, tier: "small" },
 };
 
 /** Constellation seeds — broad field coverage with bridging clusters */
 const CONSTELLATIONS = [
-  { x: 0.1, y: 0.16, density: 1.12 },
-  { x: 0.26, y: 0.12, density: 0.72 },
-  { x: 0.5, y: 0.11, density: 0.88 },
-  { x: 0.74, y: 0.14, density: 1.04 },
-  { x: 0.9, y: 0.19, density: 0.92 },
-  { x: 0.08, y: 0.4, density: 1.08 },
-  { x: 0.3, y: 0.36, density: 0.58 },
-  { x: 0.52, y: 0.34, density: 0.42 },
-  { x: 0.7, y: 0.4, density: 0.78 },
-  { x: 0.92, y: 0.46, density: 0.96 },
-  { x: 0.12, y: 0.64, density: 1.06 },
-  { x: 0.36, y: 0.7, density: 0.68 },
-  { x: 0.54, y: 0.68, density: 0.52 },
-  { x: 0.76, y: 0.72, density: 0.82 },
-  { x: 0.88, y: 0.62, density: 0.86 },
+  { x: 0.1, y: 0.2, density: 1.12 },
+  { x: 0.24, y: 0.16, density: 0.72 },
+  { x: 0.5, y: 0.14, density: 0.72 },
+  { x: 0.76, y: 0.17, density: 1.04 },
+  { x: 0.9, y: 0.22, density: 0.92 },
+  { x: 0.08, y: 0.42, density: 1.08 },
+  { x: 0.28, y: 0.38, density: 0.52 },
+  { x: 0.52, y: 0.36, density: 0.36 },
+  { x: 0.72, y: 0.4, density: 0.78 },
+  { x: 0.92, y: 0.48, density: 0.96 },
+  { x: 0.12, y: 0.68, density: 1.06 },
+  { x: 0.34, y: 0.74, density: 0.68 },
+  { x: 0.54, y: 0.72, density: 0.48 },
+  { x: 0.76, y: 0.76, density: 0.82 },
+  { x: 0.88, y: 0.66, density: 0.86 },
 ] as const;
 
-/** Intentional negative-space pockets */
+/** Intentional negative-space pockets — protect center title */
 const VOID_ZONES = [
-  { x: 0.52, y: 0.48, rx: 0.19, ry: 0.075 },
-  { x: 0.52, y: 0.73, rx: 0.13, ry: 0.09 },
-  { x: 0.52, y: 0.28, rx: 0.11, ry: 0.06 },
+  { x: 0.5, y: 0.48, rx: 0.24, ry: 0.12 },
+  { x: 0.5, y: 0.3, rx: 0.14, ry: 0.08 },
+  { x: 0.5, y: 0.78, rx: 0.16, ry: 0.08 },
 ] as const;
 
 const EDGE_PADDING = 12;
@@ -311,8 +311,8 @@ function getExclusionHalfSize(width: number, height: number): {
   halfH: number;
 } {
   return {
-    halfW: clamp(width * 0.19, 180, 210),
-    halfH: clamp(height * 0.075, 60, 75),
+    halfW: clamp(width * 0.22, 200, 248),
+    halfH: clamp(height * 0.1, 78, 100),
   };
 }
 
@@ -876,13 +876,15 @@ export function packWorkBubbles(
 }
 
 /** Desktop home: reserved top padding for floating navigation (px). */
-export const DESKTOP_BUBBLE_CANVAS_TOP = 100;
-/** Global downward shift applied after pack — does not re-simulate positions. */
-export const DESKTOP_BUBBLE_FIELD_OFFSET_Y = 88;
+export const DESKTOP_BUBBLE_CANVAS_TOP = 112;
+/** Soft downward shift after pack — keeps nav clear without clipping bottoms. */
+export const DESKTOP_BUBBLE_FIELD_OFFSET_Y = 28;
 /** Min bubble-center Y in content coords — keeps large bubbles below nav on hover. */
-export const DESKTOP_BUBBLE_NAV_SAFE_Y = 72;
-/** Slight featured bubble boost (+12%) without changing layout algorithm. */
-export const DESKTOP_FEATURED_SIZE_SCALE = 1.12;
+export const DESKTOP_BUBBLE_NAV_SAFE_Y = 64;
+/** Featured bubble boost — restore memory-planet scale. */
+export const DESKTOP_FEATURED_SIZE_SCALE = 1.2;
+/** Reserve bottom of hero for Surprise Muse (px). */
+export const DESKTOP_BUBBLE_BOTTOM_RESERVE = 88;
 
 export function applyDesktopBubbleFieldOffset(
   layout: PlacedBubble[],
@@ -993,7 +995,7 @@ export function getBubbleOpacity(
   }
 
   if (bubble.alwaysVisible) {
-    return 0.65;
+    return 0.68;
   }
 
   return getBlindIdleOpacity(bubble.baseSize);
@@ -1001,14 +1003,14 @@ export function getBubbleOpacity(
 
 function getBlindIdleOpacity(baseSize: number): number {
   if (baseSize <= 22) {
-    return 0.18 + (baseSize - 12) * 0.003;
+    return clamp(0.26 + (baseSize - 12) * 0.01, 0.26, 0.36);
   }
 
   if (baseSize <= 38) {
-    return 0.2 + (baseSize - 24) * 0.003;
+    return clamp(0.32 + (baseSize - 24) * 0.006, 0.32, 0.4);
   }
 
-  return clamp(0.22 + (baseSize - 40) * 0.0015, 0.22, 0.25);
+  return clamp(0.38 + (baseSize - 40) * 0.002, 0.38, 0.44);
 }
 
 export function getIdleOpacity(
@@ -1016,7 +1018,7 @@ export function getIdleOpacity(
   alwaysVisible: boolean,
 ): number {
   if (alwaysVisible) {
-    return 0.65;
+    return 0.76;
   }
 
   return getBlindIdleOpacity(baseSize);

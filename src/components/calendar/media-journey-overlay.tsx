@@ -21,7 +21,6 @@ export function MediaJourneyOverlay({
   segments,
   onSelect,
   variant = "desktop",
-  dateZoneHeight,
 }: MediaJourneyOverlayProps) {
   if (segments.length === 0) return null;
 
@@ -31,10 +30,10 @@ export function MediaJourneyOverlay({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 z-10 grid grid-cols-7 items-end pb-0.5",
+        // Full cell height, above day cells — covers capture clicks; empty space passes through
+        "pointer-events-none absolute inset-0 z-30 grid grid-cols-7 items-end pb-0.5",
         isMobile ? "gap-1" : "gap-1.5 md:gap-3",
       )}
-      style={{ top: dateZoneHeight }}
     >
       {segments.map((segment) => (
         <MediaJourneySegment

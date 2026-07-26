@@ -1,5 +1,13 @@
 export type MediaType = "BOOK" | "MOVIE" | "MUSIC" | "PODCAST" | "TV";
 
+export type BubbleMood =
+  | "melancholic"
+  | "warm"
+  | "reflective"
+  | "nostalgic"
+  | "curious"
+  | "quiet";
+
 export type WorkBubble = {
   id: number;
   type: MediaType;
@@ -9,28 +17,34 @@ export type WorkBubble = {
   color: string;
   baseSize: number;
   alwaysVisible: boolean;
+  /** Emotional tags — culture that shaped me */
+  tags?: string[];
+  mood?: BubbleMood;
 };
 
-/** Featured palette — distinct cool tones per hero bubble */
+/**
+ * Featured — flat editorial mint + blue paper cards
+ * BOOK: soft blue / mist · MOVIE: steel blue / sage · MUSIC: mint / mist green
+ */
 const FEATURED_COLOR_BY_ID: Record<number, string> = {
-  1: "#6D8FA3",
-  2: "#4D5963",
-  3: "#6E8682",
-  4: "#93ACAA",
-  5: "#2F3D4D",
-  7: "#455A4F",
-  8: "#7AD9BD",
+  1: "#7FA8C4", // BOOK — soft blue
+  2: "#6D8FA3", // MOVIE — steel blue
+  3: "#7AD9BD", // MUSIC — soft mint
+  4: "#8FCBAB", // BOOK — mist green
+  5: "#6E8682", // MOVIE — sage
+  7: "#6D8FA3", // MOVIE — steel blue
+  8: "#7AD9BD", // MUSIC — soft mint
 };
 
-/** Blind-box distribution — 35% navy, 25% blue, 20% sage, 15% forest, 5% mint */
+/**
+ * Small atmosphere cards — mint + blue dominant, sage supporting
+ */
 const BLIND_COLOR_WEIGHTS = [
-  { color: "#2F3D4D", weight: 35 },
-  { color: "#4D5963", weight: 9 },
-  { color: "#6D8FA3", weight: 8 },
-  { color: "#93ACAA", weight: 8 },
-  { color: "#6E8682", weight: 20 },
-  { color: "#455A4F", weight: 15 },
-  { color: "#8FCBAB", weight: 5 },
+  { color: "#7AD9BD", weight: 22 }, // soft mint
+  { color: "#8FCBAB", weight: 18 }, // mist green
+  { color: "#7FA8C4", weight: 22 }, // soft blue
+  { color: "#6D8FA3", weight: 22 }, // steel blue
+  { color: "#6E8682", weight: 16 }, // sage
 ] as const;
 
 function pickBlindBoxColor(id: number): string {
@@ -46,11 +60,11 @@ function pickBlindBoxColor(id: number): string {
     }
   }
 
-  return "#2F3D4D";
+  return "#7AD9BD";
 }
 
 function pickFeaturedColor(workId: number): string {
-  return FEATURED_COLOR_BY_ID[workId] ?? "#6D8FA3";
+  return FEATURED_COLOR_BY_ID[workId] ?? "#7AD9BD";
 }
 
 const EXTRA_TITLES = [
@@ -383,8 +397,10 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     type: "BOOK",
     title: "Norwegian Wood",
     creator: "Haruki Murakami",
-    quote: "Some stories whisper softly.",
+    quote: "Some memories arrive quietly.",
     alwaysVisible: true,
+    tags: ["nostalgic", "rainy", "youth"],
+    mood: "melancholic",
   },
   {
     id: 2,
@@ -393,6 +409,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Wim Wenders",
     quote: "Create before you consume.",
     alwaysVisible: true,
+    tags: ["quiet", "ritual", "still"],
+    mood: "reflective",
   },
   {
     id: 3,
@@ -401,6 +419,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Frank Ocean",
     quote: "Find beauty in silence.",
     alwaysVisible: true,
+    tags: ["intimate", "dreamy", "identity"],
+    mood: "melancholic",
   },
   {
     id: 4,
@@ -409,6 +429,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Haruki Murakami",
     quote: "A warm place to return.",
     alwaysVisible: true,
+    tags: ["dreamlike", "curious", "strange"],
+    mood: "curious",
   },
   {
     id: 5,
@@ -417,6 +439,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Richard Linklater",
     quote: "Slow down and breathe.",
     alwaysVisible: true,
+    tags: ["warm", "youth", "night"],
+    mood: "warm",
   },
   {
     id: 6,
@@ -425,6 +449,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Christopher Nolan",
     quote: "Leave reality for a while.",
     alwaysVisible: false,
+    tags: ["vast", "longing", "curious"],
+    mood: "curious",
   },
   {
     id: 7,
@@ -433,6 +459,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Wong Kar-wai",
     quote: "Some moments never fade.",
     alwaysVisible: true,
+    tags: ["nostalgic", "longing", "rainy"],
+    mood: "nostalgic",
   },
   {
     id: 8,
@@ -441,6 +469,8 @@ const PRIMARY_WORKS: PrimaryWorkSeed[] = [
     creator: "Sufjan Stevens",
     quote: "Let imagination guide you.",
     alwaysVisible: true,
+    tags: ["gentle", "memory", "reflective"],
+    mood: "reflective",
   },
 ];
 

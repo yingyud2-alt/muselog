@@ -25,7 +25,7 @@ function HabitBar({
     <div className="space-y-1.5">
       <p className="text-xs text-white/45">{label}</p>
       <p
-        className="font-mono text-sm tracking-[0.2em] text-teal-300/75"
+        className="font-label text-sm tracking-[0.2em] text-teal-300/75"
         aria-label={`${label} activity ${Math.round(ratio * 100)} percent`}
       >
         {"█".repeat(filled)}

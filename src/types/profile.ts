@@ -16,6 +16,13 @@ export interface ProfileIdentity {
   memberSince: string;
 }
 
+export interface MusePersona {
+  title: string;
+  description: string;
+  /** 0–100 portrait confidence from taste signal strength */
+  confidence?: number;
+}
+
 export interface TasteTag {
   label: string;
   weight: number;
@@ -48,6 +55,23 @@ export interface ProfileTimelineMonth {
 export interface ProfileTimelineYear {
   year: string;
   months: ProfileTimelineMonth[];
+}
+
+export interface TasteTimelineMoment {
+  id: string;
+  year: string;
+  month: string;
+  insight: string;
+  entryCount: number;
+}
+
+export interface MemoryHighlight {
+  id: string;
+  title: string;
+  creator: string;
+  date: string;
+  excerpt: string;
+  journalItem: MediaItem;
 }
 
 export type CurrentJourneyItem = LibraryItem;

@@ -5,7 +5,14 @@ export type MediaEventType = "BOOK" | "MOVIE" | "MUSIC";
 
 export type MediaStatus = "WANT" | "READING" | "FINISHED";
 
-export type JourneyColor = "teal" | "cyan" | "amber" | "olive";
+/** Per-memory journey color — persisted as journal entry journeyColor / color */
+export type JourneyColor =
+  | "mint"
+  | "teal"
+  | "ocean"
+  | "sage"
+  | "beige"
+  | "lavender";
 
 /** API-ready media journal entry. */
 export interface MediaItem {
@@ -25,14 +32,18 @@ export interface MediaItem {
   tags: string[];
   /** Time spent with this work (minutes) */
   duration?: number;
+  /** Explicit minutes for check-ins / analytics (preferred numeric field) */
+  durationMinutes?: number;
   /** Photo memory URLs */
   memories?: string[];
   /** Journey start (relationship began) */
   startDate?: string;
   /** Journey end (relationship concluded) */
   endDate?: string;
-  /** Highlighter color for journey bar */
+  /** Highlighter color for this memory/journey (also known as color) */
   journeyColor?: JourneyColor;
+  /** Optional alias for journeyColor — API / future schema */
+  color?: JourneyColor;
   /** Optional moment context, e.g. "listened at night" */
   moment?: string;
 }
@@ -60,27 +71,44 @@ export const MEDIA_EXPLORE_IDS: Record<string, string> = {
   "calendar-carrie-and-lowell": "music-carrie-and-lowell",
 };
 
+export const JOURNEY_COLOR_SWATCHES: Record<JourneyColor, string> = {
+  mint: "#6ED4B8",
+  teal: "#5CB8A6",
+  ocean: "#5A9BC4",
+  sage: "#8AAE9A",
+  beige: "#C4B8A8",
+  lavender: "#9AA8B8",
+};
+
 export const JOURNEY_COLOR_STYLES: Record<
   JourneyColor,
-  { highlight: string; label: string }
+  { highlight: string; label: string; swatch: string }
 > = {
-  teal: { highlight: "bg-teal-400/45", label: "Teal" },
-  cyan: { highlight: "bg-cyan-400/42", label: "Cyan" },
-  amber: { highlight: "bg-amber-400/42", label: "Amber" },
-  olive: { highlight: "bg-lime-600/40", label: "Olive" },
+  mint: { highlight: "bg-[#6ED4B8]/55", label: "Mint", swatch: "#6ED4B8" },
+  teal: { highlight: "bg-[#5CB8A6]/55", label: "Teal", swatch: "#5CB8A6" },
+  ocean: { highlight: "bg-[#5A9BC4]/55", label: "Ocean", swatch: "#5A9BC4" },
+  sage: { highlight: "bg-[#8AAE9A]/55", label: "Sage", swatch: "#8AAE9A" },
+  beige: { highlight: "bg-[#C4B8A8]/55", label: "Beige", swatch: "#C4B8A8" },
+  lavender: {
+    highlight: "bg-[#9AA8B8]/55",
+    label: "Lavender",
+    swatch: "#9AA8B8",
+  },
 };
 
 export const JOURNEY_COLOR_OPTIONS: JourneyColor[] = [
+  "mint",
   "teal",
-  "cyan",
-  "amber",
-  "olive",
+  "ocean",
+  "sage",
+  "beige",
+  "lavender",
 ];
 
 export const TYPE_JOURNEY_COLORS: Record<MediaType, JourneyColor> = {
-  book: "teal",
-  movie: "amber",
-  music: "olive",
+  book: "ocean",
+  movie: "sage",
+  music: "mint",
 };
 
 export const CALENDAR_MOCK_MEDIA: MediaItem[] = [
@@ -100,7 +128,7 @@ export const CALENDAR_MOCK_MEDIA: MediaItem[] = [
     date: "2026-07-12",
     startDate: "2026-07-12",
     endDate: "2026-07-20",
-    journeyColor: "teal",
+    journeyColor: "ocean",
     duration: 480,
     memories: [],
   },
@@ -119,7 +147,7 @@ export const CALENDAR_MOCK_MEDIA: MediaItem[] = [
     date: "2026-07-15",
     startDate: "2026-07-15",
     endDate: "2026-07-15",
-    journeyColor: "amber",
+    journeyColor: "sage",
     duration: 90,
     memories: [],
   },
@@ -138,7 +166,7 @@ export const CALENDAR_MOCK_MEDIA: MediaItem[] = [
     date: "2026-07-20",
     startDate: "2026-07-20",
     endDate: "2026-07-20",
-    journeyColor: "olive",
+    journeyColor: "mint",
     duration: 45,
     memories: [],
   },

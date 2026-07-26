@@ -2,10 +2,7 @@
 
 import { useMemo } from "react";
 
-import {
-  CALENDAR_DEFAULT_MONTH,
-  CALENDAR_DEFAULT_YEAR,
-} from "@/lib/calendar/constants";
+import { useActiveMonth } from "@/lib/calendar/active-month-store";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getUserContentById } from "@/lib/content/user-content-store";
 import { useHabitLogs } from "@/lib/habit/habit-store";
@@ -27,13 +24,17 @@ import {
 } from "@/lib/reflection/reflection-utils";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 
-export function useReflectionData(): MonthlyReflectionData {
+export function useReflectionData(
+  yearOverride?: number,
+  monthOverride?: number,
+): MonthlyReflectionData {
   const { allItems } = useLibraryItems();
   const { entries: journalEntries } = useJournalEntries();
   const { logs: habitLogs } = useHabitLogs();
+  const activeMonth = useActiveMonth();
 
-  const year = CALENDAR_DEFAULT_YEAR;
-  const month = CALENDAR_DEFAULT_MONTH;
+  const year = yearOverride ?? activeMonth.year;
+  const month = monthOverride ?? activeMonth.month;
 
   return useMemo(() => {
     const monthName = formatReflectionMonthName(month);

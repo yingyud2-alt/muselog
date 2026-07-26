@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
+import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
@@ -18,8 +17,9 @@ const TYPE_OPTIONS: Array<{ id: LibraryTypeFilter; label: string }> = [
 const STATUS_OPTIONS: Array<{ id: LibraryStatusFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "WANT", label: "Want" },
-  { id: "ONGOING", label: "In Progress" },
+  { id: "ONGOING", label: "Reading" },
   { id: "FINISHED", label: "Finished" },
+  { id: "DROPPED", label: "Dropped" },
 ];
 
 type LibraryEmptyStateProps = {
@@ -33,30 +33,39 @@ export function LibraryEmptyState({
   typeFilter,
   statusFilter,
 }: LibraryEmptyStateProps) {
-  let message = "No titles found in your Library.";
+  let title = "No memories yet.";
+  let description = "Start your first journey and build a quiet archive.";
 
   if (query) {
-    message = "No titles found in your Library.";
+    title = "Nothing matches this search.";
+    description = "Try another title, creator, or mood.";
   } else if (statusFilter === "FINISHED" && typeFilter === "MOVIE") {
-    message = "No finished movies yet.";
+    title = "No finished movies yet.";
+    description = "When a film stays with you, mark it finished here.";
   } else if (statusFilter === "WANT") {
-    message = "Your watchlist is empty.";
+    title = "Your waiting list is empty.";
+    description = "Save something you want to read, watch, or listen to.";
   } else if (statusFilter === "ONGOING") {
-    message = "Nothing in progress right now.";
+    title = "Nothing in progress right now.";
+    description = "Begin a work and it will appear in your journey.";
   } else if (statusFilter === "FINISHED") {
-    message = "No finished titles yet.";
+    title = "No finished titles yet.";
+    description = "Finish something slowly — your archive will grow.";
+  } else if (statusFilter === "DROPPED") {
+    title = "Nothing dropped yet.";
+    description = "Works you set aside will gather quietly here.";
+  } else if (typeFilter !== "all") {
+    title = "No titles in this collection yet.";
+    description = "Explore and save works that match your feeling.";
   }
 
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <p className="text-sm text-white/55">{message}</p>
-      <Link
-        href="/explore"
-        className="mt-4 rounded-full border border-white/14 px-4 py-2 text-sm text-white/72 transition-colors hover:bg-white/[0.04]"
-      >
-        Explore titles
-      </Link>
-    </div>
+    <MuseEmptyState
+      title={title}
+      description={description}
+      actionLabel="Start your first journey"
+      actionHref="/explore"
+    />
   );
 }
 
@@ -73,10 +82,10 @@ function FilterChip({ label, active, onClick }: FilterChipProps) {
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
+        "shrink-0 rounded-full border px-3 py-1 text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15",
         active
-          ? "border-white/24 bg-white/10 text-white/88"
-          : "border-white/10 text-white/52 hover:bg-white/[0.04]",
+          ? "border-white/16 bg-white/[0.07] text-white/80"
+          : "border-transparent text-white/38 hover:bg-white/[0.03] hover:text-white/55",
       )}
     >
       {label}

@@ -113,7 +113,7 @@ export function MediaProgressBar({
   return (
     <p
       className={cn(
-        "font-mono text-[8px] tracking-[0.14em] text-white/40",
+        "font-label text-[8px] tracking-[0.14em] text-white/40",
         className,
       )}
       aria-label={`${Math.round(filled * 100)} percent complete`}

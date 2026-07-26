@@ -40,7 +40,7 @@ export function RecentlyAddedPreview({ items }: RecentlyAddedPreviewProps) {
         action={
           <Link
             href="/library"
-            className="inline-flex items-center gap-1 text-sm text-white/45 transition hover:text-white/72"
+            className="font-display inline-flex items-center gap-1 text-sm text-white/45 transition hover:text-white/72"
           >
             View all
             <ArrowRight className="size-3.5" aria-hidden="true" />
@@ -61,10 +61,10 @@ export function RecentlyAddedPreview({ items }: RecentlyAddedPreviewProps) {
                 title={item.title}
                 className="w-full rounded-xl transition-transform duration-300 group-hover:scale-[1.02]"
               />
-              <p className="mt-2 truncate text-xs font-medium text-white/78">
+              <p className="font-display mt-2 truncate text-xs font-normal text-white/78">
                 {item.title}
               </p>
-              <p className="text-[10px] uppercase tracking-[0.12em] text-white/32">
+              <p className="font-label text-[10px] uppercase tracking-[0.12em] text-white/32">
                 {item.typeLabel}
               </p>
             </Link>

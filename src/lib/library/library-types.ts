@@ -4,7 +4,12 @@ export type LibraryMediaType = "BOOK" | "MOVIE" | "MUSIC";
 
 export type LibraryTypeFilter = "all" | LibraryMediaType;
 
-export type LibraryStatusFilter = "all" | "WANT" | "ONGOING" | "FINISHED";
+export type LibraryStatusFilter =
+  | "all"
+  | "WANT"
+  | "ONGOING"
+  | "FINISHED"
+  | "DROPPED";
 
 export type LibrarySort =
   | "recently-updated"
@@ -36,4 +41,5 @@ export type LibraryStats = {
   want: number;
   ongoing: number;
   finished: number;
+  dropped: number;
 };

@@ -49,7 +49,7 @@ export function MobileNavigation() {
                 )}
                 aria-hidden="true"
               />
-              <span className="truncate text-[10px] font-medium tracking-wide">
+              <span className="font-display truncate text-[10px] font-bold tracking-wide">
                 {item.title}
               </span>
             </Link>

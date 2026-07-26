@@ -25,6 +25,7 @@ export type BubbleTypography = {
   quote: number;
   title: number;
   typeTracking: string;
+  quoteTracking: string;
   quoteLineHeight: number;
   titleLineHeight: number;
   typeToQuoteGap: number;
@@ -202,6 +203,7 @@ export function getContentBox(
   }
 }
 
+/** Quote-first hierarchy: quote dominant, title supporting, type muted. */
 export function getBubbleTypography(
   diameter: number,
   state: BubbleTextState,
@@ -209,40 +211,42 @@ export function getBubbleTypography(
   if (state === "far-featured") {
     if (diameter < 140) {
       return {
-        type: 8,
-        quote: 10,
+        type: 7.5,
+        quote: 12,
         title: 9,
         typeTracking: "0.12em",
-        quoteLineHeight: 1.28,
+        quoteTracking: "0.012em",
+        quoteLineHeight: 1.3,
         titleLineHeight: 1.22,
         typeToQuoteGap: 5,
         quoteToTitleGap: 6,
         quoteMaxLines: 4,
         titleMaxLines: 3,
-        quoteFontWeight: 500,
+        quoteFontWeight: 700,
         titleFontWeight: 400,
-        typeOpacity: 0.42,
-        quoteOpacity: 0.9,
-        titleOpacity: 0.68,
+        typeOpacity: 0.36,
+        quoteOpacity: 1,
+        titleOpacity: 0.62,
       };
     }
 
     return {
       type: 8,
-      quote: 11,
-      title: 10,
+      quote: 13,
+      title: 9.5,
       typeTracking: "0.13em",
-      quoteLineHeight: 1.28,
+      quoteTracking: "0.012em",
+      quoteLineHeight: 1.3,
       titleLineHeight: 1.24,
       typeToQuoteGap: 5,
       quoteToTitleGap: 6,
       quoteMaxLines: 4,
       titleMaxLines: 3,
-      quoteFontWeight: 500,
+      quoteFontWeight: 700,
       titleFontWeight: 400,
-      typeOpacity: 0.44,
-      quoteOpacity: 0.92,
-      titleOpacity: 0.7,
+      typeOpacity: 0.38,
+      quoteOpacity: 1,
+      titleOpacity: 0.64,
     };
   }
 
@@ -250,39 +254,41 @@ export function getBubbleTypography(
     if (diameter < 172) {
       return {
         type: 8,
-        quote: 11,
+        quote: 13.5,
         title: 10,
         typeTracking: "0.14em",
-        quoteLineHeight: 1.28,
+        quoteTracking: "0.014em",
+        quoteLineHeight: 1.32,
         titleLineHeight: 1.24,
         typeToQuoteGap: 6,
         quoteToTitleGap: 7,
         quoteMaxLines: 4,
         titleMaxLines: 3,
-        quoteFontWeight: 500,
+        quoteFontWeight: 700,
         titleFontWeight: 400,
-        typeOpacity: 0.46,
-        quoteOpacity: 0.93,
-        titleOpacity: 0.72,
+        typeOpacity: 0.38,
+        quoteOpacity: 1,
+        titleOpacity: 0.64,
       };
     }
 
     return {
-      type: 9,
-      quote: 12,
-      title: 11,
+      type: 8.5,
+      quote: 14.5,
+      title: 10.5,
       typeTracking: "0.15em",
-      quoteLineHeight: 1.3,
+      quoteTracking: "0.014em",
+      quoteLineHeight: 1.34,
       titleLineHeight: 1.25,
       typeToQuoteGap: 6,
       quoteToTitleGap: 7,
       quoteMaxLines: 4,
       titleMaxLines: 3,
-      quoteFontWeight: 500,
-      titleFontWeight: 500,
-      typeOpacity: 0.48,
-      quoteOpacity: 0.94,
-      titleOpacity: 0.74,
+      quoteFontWeight: 700,
+      titleFontWeight: 400,
+      typeOpacity: 0.4,
+      quoteOpacity: 1,
+      titleOpacity: 0.66,
     };
   }
 
@@ -290,118 +296,124 @@ export function getBubbleTypography(
     if (diameter < 165) {
       return {
         type: 8,
-        quote: 12,
+        quote: 14,
         title: diameter < 156 ? 9 : 10,
         typeTracking: "0.12em",
-        quoteLineHeight: 1.3,
+        quoteTracking: "0.015em",
+        quoteLineHeight: 1.34,
         titleLineHeight: 1.25,
         typeToQuoteGap: 6,
         quoteToTitleGap: 7,
         quoteMaxLines: 4,
         titleMaxLines: 3,
-        quoteFontWeight: 500,
+        quoteFontWeight: 700,
         titleFontWeight: 400,
-        typeOpacity: 0.42,
-        quoteOpacity: 0.94,
-        titleOpacity: 0.7,
+        typeOpacity: 0.36,
+        quoteOpacity: 1,
+        titleOpacity: 0.64,
       };
     }
 
     if (diameter < 185) {
       return {
         type: 8,
-        quote: 13,
+        quote: 15,
         title: 10,
         typeTracking: "0.14em",
-        quoteLineHeight: 1.3,
+        quoteTracking: "0.015em",
+        quoteLineHeight: 1.34,
         titleLineHeight: 1.25,
         typeToQuoteGap: 6,
         quoteToTitleGap: 8,
         quoteMaxLines: 4,
         titleMaxLines: 3,
-        quoteFontWeight: 500,
+        quoteFontWeight: 700,
         titleFontWeight: 400,
-        typeOpacity: 0.44,
-        quoteOpacity: 0.94,
-        titleOpacity: 0.72,
+        typeOpacity: 0.38,
+        quoteOpacity: 1,
+        titleOpacity: 0.66,
       };
     }
 
     return {
-      type: 9,
-      quote: 14,
+      type: 8.5,
+      quote: 16,
       title: 11,
       typeTracking: "0.16em",
-      quoteLineHeight: 1.32,
+      quoteTracking: "0.016em",
+      quoteLineHeight: 1.36,
       titleLineHeight: 1.26,
       typeToQuoteGap: 7,
       quoteToTitleGap: 9,
       quoteMaxLines: 4,
       titleMaxLines: 3,
-      quoteFontWeight: 500,
-      titleFontWeight: 500,
-      typeOpacity: 0.46,
-      quoteOpacity: 0.94,
-      titleOpacity: 0.74,
+      quoteFontWeight: 700,
+      titleFontWeight: 400,
+      typeOpacity: 0.4,
+      quoteOpacity: 1,
+      titleOpacity: 0.68,
     };
   }
 
   if (diameter < 220) {
     return {
-      type: 9,
-      quote: 14,
+      type: 8.5,
+      quote: 16.5,
       title: 11,
       typeTracking: "0.16em",
-      quoteLineHeight: 1.28,
+      quoteTracking: "0.016em",
+      quoteLineHeight: 1.34,
       titleLineHeight: 1.24,
       typeToQuoteGap: 8,
       quoteToTitleGap: 9,
       quoteMaxLines: 5,
       titleMaxLines: 3,
-      quoteFontWeight: 600,
+      quoteFontWeight: 700,
       titleFontWeight: 400,
-      typeOpacity: 0.46,
-      quoteOpacity: 0.96,
-      titleOpacity: 0.76,
+      typeOpacity: 0.4,
+      quoteOpacity: 1,
+      titleOpacity: 0.7,
     };
   }
 
   if (diameter < 240) {
     return {
       type: 9,
-      quote: 15,
+      quote: 17.5,
       title: 12,
       typeTracking: "0.18em",
-      quoteLineHeight: 1.3,
+      quoteTracking: "0.018em",
+      quoteLineHeight: 1.36,
       titleLineHeight: 1.26,
       typeToQuoteGap: 8,
       quoteToTitleGap: 10,
       quoteMaxLines: 5,
       titleMaxLines: 3,
-      quoteFontWeight: 600,
-      titleFontWeight: 500,
-      typeOpacity: 0.48,
-      quoteOpacity: 0.96,
-      titleOpacity: 0.78,
+      quoteFontWeight: 700,
+      titleFontWeight: 400,
+      typeOpacity: 0.42,
+      quoteOpacity: 1,
+      titleOpacity: 0.72,
     };
   }
 
   return {
-    type: 10,
-    quote: 16,
-    title: 13,
+    type: 9.5,
+    quote: 18.5,
+    title: 12.5,
     typeTracking: "0.2em",
-    quoteLineHeight: 1.32,
+    quoteTracking: "0.018em",
+    quoteLineHeight: 1.38,
     titleLineHeight: 1.28,
     typeToQuoteGap: 9,
     quoteToTitleGap: 11,
     quoteMaxLines: 5,
     titleMaxLines: 3,
-    quoteFontWeight: 600,
-    titleFontWeight: 500,
-    typeOpacity: 0.5,
+    quoteFontWeight: 700,
+    titleFontWeight: 400,
+    typeOpacity: 0.44,
     quoteOpacity: 1,
-    titleOpacity: 0.8,
+    titleOpacity: 0.74,
   };
 }
 
@@ -411,18 +423,18 @@ export function getFocusedFontSizes(expandedDiameter: number): {
   title: number;
 } {
   if (expandedDiameter >= 240) {
-    return { type: 10, quote: 16, title: 13 };
+    return { type: 9.5, quote: 18.5, title: 12.5 };
   }
 
   if (expandedDiameter >= 220) {
-    return { type: 9, quote: 15, title: 12 };
+    return { type: 9, quote: 17.5, title: 12 };
   }
 
   if (expandedDiameter >= 196) {
-    return { type: 9, quote: 14, title: 11 };
+    return { type: 8.5, quote: 16.5, title: 11 };
   }
 
-  return { type: 9, quote: 13, title: 11 };
+  return { type: 8.5, quote: 15, title: 11 };
 }
 
 export function getContentWidth(baseSize: number): number {

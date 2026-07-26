@@ -29,13 +29,13 @@ export function SurpriseMuseBox() {
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white/85">Surprise Muse</p>
-          <p className="mt-0.5 text-xs text-white/45">Discover something new</p>
-          <p className="mt-1 truncate text-[11px] text-white/35">
+          <p className="font-display text-sm font-bold text-white/85">Surprise Muse</p>
+          <p className="font-display mt-0.5 text-xs text-white/45">Discover something new</p>
+          <p className="font-body mt-1 truncate text-[11px] text-white/35">
             {pick.title} · {pick.creator}
           </p>
         </div>
-        <span className="shrink-0 text-xs text-violet-200/55 transition-colors group-hover:text-violet-200/85">
+        <span className="font-display shrink-0 text-xs font-bold text-violet-200/55 transition-colors group-hover:text-violet-200/85">
           Reveal
         </span>
       </div>

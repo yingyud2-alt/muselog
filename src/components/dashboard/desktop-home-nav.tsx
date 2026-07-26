@@ -35,7 +35,7 @@ export function DesktopHomeNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+              "font-display rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20",
               active
                 ? "bg-white/12 text-white/92"

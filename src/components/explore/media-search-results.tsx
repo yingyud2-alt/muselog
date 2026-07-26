@@ -21,7 +21,12 @@ export function MediaSearchResults({
   return (
     <div className="absolute inset-x-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border border-white/10 bg-[#10161D]/95 shadow-[0_16px_48px_rgba(0,0,0,0.4)] backdrop-blur-xl">
       {results.length === 0 ? (
-        <p className="px-4 py-5 text-sm text-white/45">No matches found.</p>
+        <div className="px-4 py-5">
+          <p className="text-sm font-medium text-white/70">No matches found.</p>
+          <p className="mt-1 text-xs text-white/40">
+            Try another title, creator, or mood.
+          </p>
+        </div>
       ) : (
         <ul className="max-h-64 overflow-y-auto py-1">
           {results.map((item) => (

@@ -42,13 +42,13 @@ export function BubbleStatusActions({
 
   if (isFinished) {
     return (
-      <div className={cn("mt-7 space-y-3 md:mt-8", className)}>
+      <div className={cn("mt-7 space-y-3 md:mt-0", className)}>
         {state.rating && state.rating > 0 && (
-          <div className="flex justify-center">
+          <div className="flex justify-center md:justify-start">
             <MemoryStars rating={state.rating} size="md" />
           </div>
         )}
-        <p className="text-center text-sm font-medium text-white/72">
+        <p className="text-center text-sm font-medium text-white/72 md:text-left">
           {labels.finished}
         </p>
         <button
@@ -58,7 +58,7 @@ export function BubbleStatusActions({
             stop(event);
             router.push("/calendar");
           }}
-          className="flex h-[48px] w-full items-center justify-center rounded-full border border-white/18 bg-white/[0.08] text-sm text-white/82 transition-colors hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 md:h-auto md:py-3"
+          className="flex h-[48px] w-full items-center justify-center rounded-full border border-white/18 bg-white/[0.08] text-sm text-white/82 transition-colors hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 md:h-auto md:py-2.5"
         >
           {labels.viewInJournal}
         </button>
@@ -68,7 +68,7 @@ export function BubbleStatusActions({
 
   if (isOngoing) {
     return (
-      <div className={cn("mt-7 space-y-3 md:mt-8", className)}>
+      <div className={cn("mt-7 space-y-3 md:mt-0", className)}>
         <button
           type="button"
           aria-label={labels.continueInJournal}
@@ -76,12 +76,12 @@ export function BubbleStatusActions({
             stop(event);
             router.push("/calendar");
           }}
-          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-3"
+          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-2.5"
         >
           {labels.continueInJournal}
         </button>
 
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center md:justify-start">
           <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-white/55">
             {labels.ongoing}
           </span>
@@ -103,7 +103,7 @@ export function BubbleStatusActions({
   }
 
   return (
-    <div className={cn("mt-7 space-y-2.5 md:mt-8 md:space-y-3", className)}>
+    <div className={cn("mt-7 space-y-2.5 md:mt-0 md:space-y-2.5", className)}>
       <button
         type="button"
         aria-label={labels.addToJournal}
@@ -111,7 +111,7 @@ export function BubbleStatusActions({
           stop(event);
           onAddToJournal();
         }}
-        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-3"
+        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-2.5"
       >
         <Plus size={18} aria-hidden="true" />
         {labels.addToJournal}

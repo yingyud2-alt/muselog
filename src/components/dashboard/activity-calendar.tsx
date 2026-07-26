@@ -51,10 +51,10 @@ export function ActivityCalendar({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-lg font-medium tracking-tight text-white/88">
+        <h2 className="font-display text-lg font-bold tracking-tight text-white/88">
           Activity
         </h2>
-        <p className="text-sm text-white/42">
+        <p className="font-display text-sm text-white/42">
           Your reading, watching, and listening journey
         </p>
       </div>

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 
 import { mergeMediaWithJourneyOverrides } from "@/lib/calendar/journey-utils";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
+import { mediaItemToWork } from "@/lib/work/work-adapters";
 import { CALENDAR_MOCK_MEDIA } from "@/types/media";
 import type { JourneyColor, MediaItem } from "@/types/media";
 
@@ -106,6 +107,9 @@ export function useCalendarMedia() {
     [baseItems, overrideRecord],
   );
 
+  /** Unified Work view of journal calendar entries. */
+  const works = useMemo(() => items.map((item) => mediaItemToWork(item)), [items]);
+
   const saveJourney = useCallback(
     (
       mediaId: string,
@@ -122,7 +126,7 @@ export function useCalendarMedia() {
     [],
   );
 
-  return { items, saveJourney, addJournalEntry: addEntry };
+  return { items, works, saveJourney, addJournalEntry: addEntry };
 }
 
 export type { MediaItem };
