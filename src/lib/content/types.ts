@@ -4,6 +4,7 @@ export type ContentSource =
   | "douban"
   | "tmdb"
   | "google_books"
+  | "open_library"
   | "spotify"
   | "manual";
 

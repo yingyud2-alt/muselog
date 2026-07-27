@@ -1,62 +1,37 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { CategoryExplorer } from "@/components/explore/category-explorer";
-import { ContentCoverImage } from "@/components/explore/content-cover";
+import { ContentCard } from "@/components/explore/content-card";
 import { SearchBar } from "@/components/explore/search-bar";
-import { WorkStatusActions } from "@/components/work-status-actions";
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import {
   contentMatchesExploreMood,
   EXPLORE_MOODS,
 } from "@/lib/content/constants";
-import type { Content } from "@/lib/content/types";
+import { toExploreDataLog } from "@/lib/explore/explore-content-provider";
+import { useExploreContentCatalog } from "@/lib/explore/explore-public-catalog";
 import { useExploreUiState } from "@/lib/explore/explore-ui-state";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 import { cn } from "@/lib/utils";
 
-function MobileExploreCard({ content }: { content: Content }) {
-  const reasonTags = content.tags.slice(0, 2).join(" / ");
-
-  return (
-    <article className="overflow-hidden rounded-[22px] border border-white/[0.08] bg-white/[0.035] shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-md">
-      <ContentCoverImage content={content} variant="list" className="rounded-none" />
-
-      <div className="space-y-3 p-4">
-        <div>
-          <h3 className="text-lg font-medium leading-snug text-white/92">
-            {content.title}
-          </h3>
-          <p className="mt-0.5 text-sm text-white/48">{content.creator}</p>
-        </div>
-
-        <p className="text-sm leading-relaxed text-white/55">
-          Because you liked:{" "}
-          <span className="italic text-white/68">{reasonTags}</span>
-        </p>
-
-        <WorkStatusActions
-          workId={content.id}
-          type={content.type}
-          title={content.title}
-          creator={content.creator}
-          cover={content.cover}
-          variant="compact"
-        />
-      </div>
-    </article>
-  );
-}
-
 export function MobileExplore() {
   const { exploreMood, setExploreMood } = useExploreUiState();
+  const catalog = useExploreContentCatalog();
 
   const items = useMemo(() => {
-    return CONTENT_CATALOG.filter((item) =>
+    const filtered = catalog.filter((item) =>
       contentMatchesExploreMood(item.tags, exploreMood),
     );
-  }, [exploreMood]);
+    // API-first: avoid empty mood grids when subjects don't map to mock tags.
+    return filtered.length > 0 ? filtered : catalog;
+  }, [catalog, exploreMood]);
+
+  useEffect(() => {
+    // Temporary runtime verification — Open Library vs mock.
+    // eslint-disable-next-line no-console
+    console.log("EXPLORE DATA", toExploreDataLog(items));
+  }, [items]);
 
   return (
     <div
@@ -95,9 +70,9 @@ export function MobileExplore() {
         ))}
       </div>
 
-      <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3">
         {items.map((content) => (
-          <MobileExploreCard key={content.id} content={content} />
+          <ContentCard key={content.id} content={content} />
         ))}
       </div>
 

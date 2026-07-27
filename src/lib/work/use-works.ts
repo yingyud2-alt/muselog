@@ -10,6 +10,7 @@ import {
   getWorkById,
   listCatalogWorks,
 } from "@/lib/work/work-repository";
+import { useImportedWorkMap } from "@/lib/work/imported-work-catalog";
 import { workToLibraryItem } from "@/lib/work/work-adapters";
 import type { LibraryItem } from "@/lib/library/library-types";
 import type { Work, WorkType, WorkUserStatus } from "@/types/work";
@@ -33,10 +34,11 @@ export function useWorks(options: UseWorksOptions = {}) {
   const stateMap = useUserMediaStateMap();
   const { memories } = useAllMemories();
   const { entries: journalEntries } = useJournalEntries();
+  const importedMap = useImportedWorkMap();
 
   const allWorks = useMemo(
     () => buildWorks(stateMap, memories, journalEntries),
-    [stateMap, memories, journalEntries],
+    [stateMap, memories, journalEntries, importedMap],
   );
 
   const works = useMemo(() => {
@@ -47,11 +49,14 @@ export function useWorks(options: UseWorksOptions = {}) {
     });
   }, [allWorks, type, userStatus]);
 
-  const catalogWorks = useMemo(() => listCatalogWorks(), []);
+  const catalogWorks = useMemo(
+    () => listCatalogWorks(),
+    [importedMap],
+  );
 
   const getWork = useCallback(
     (id: string) => getWorkById(id, stateMap, memories, journalEntries),
-    [stateMap, memories, journalEntries],
+    [stateMap, memories, journalEntries, importedMap],
   );
 
   const asLibraryItems = useMemo(

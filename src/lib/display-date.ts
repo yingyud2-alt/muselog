@@ -1,5 +1,5 @@
 /** Fixed reference date for deterministic SSR date rendering. */
-export const DISPLAY_REFERENCE_DATE = new Date(Date.UTC(2026, 6, 23, 14, 0, 0));
+export const DISPLAY_REFERENCE_DATE = new Date(Date.UTC(2026, 6, 27, 14, 0, 0));
 
 export const DISPLAY_DATE_LOCALE = "en-US";
 

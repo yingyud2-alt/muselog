@@ -1,3 +1,5 @@
+"use client";
+
 import { DiscoveryCard } from "@/components/explore/discovery-card";
 import type { ExploreDiscoveryItem } from "@/lib/content/explore-discovery";
 import { cn } from "@/lib/utils";
@@ -34,7 +36,7 @@ export function DiscoveryCarousel({
           "p-4 shadow-[0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-5",
         )}
       >
-        <div className="-mx-1 flex gap-3.5 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
+        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
           {items.map((item) => (
             <DiscoveryCard key={item.id} item={item} />
           ))}

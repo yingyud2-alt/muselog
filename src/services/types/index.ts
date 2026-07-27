@@ -1,6 +1,8 @@
 export type {
   Work,
   WorkAiInsights,
+  WorkEnrichment,
+  WorkEnrichmentSimilarWork,
   WorkListQuery,
   WorkListResult,
   WorkTimeline,

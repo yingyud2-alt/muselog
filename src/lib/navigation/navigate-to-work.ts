@@ -25,7 +25,11 @@ export function navigateToWorkDetail(
     saveReturnContext();
   }
   if (options?.closeOverlays !== false) {
-    closeAllDetails();
+    // Keep ReturnContext; do not flash-restore Explore scroll before leaving.
+    closeAllDetails({
+      preserveReturnContext: true,
+      skipScrollRestore: true,
+    });
   }
   router.push(`/work/${workId}`, { scroll: true });
 }

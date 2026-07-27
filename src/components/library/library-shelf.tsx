@@ -1,6 +1,7 @@
 "use client";
 
 import { LibraryArchiveCover } from "@/components/library/library-archive-cover";
+import { LibraryCardQuickActions } from "@/components/library/library-card-quick-actions";
 import { LibraryMoodTags } from "@/components/library/library-mood-tags";
 import {
   deriveLibraryMoodTags,
@@ -23,6 +24,8 @@ type LibraryShelfProps = {
   getReason?: (item: LibraryItem) => string | null;
   /** collectible = Apple Music / Kindle shelf cards */
   variant?: "default" | "collectible" | "recent";
+  /** Show Finished / Rate / Add Journal / Drop under each card. */
+  showQuickActions?: boolean;
 };
 
 export function LibraryShelf({
@@ -35,6 +38,7 @@ export function LibraryShelf({
   showReason = false,
   getReason,
   variant = "default",
+  showQuickActions = false,
 }: LibraryShelfProps) {
   const widthClass =
     cardWidth === "lg"
@@ -77,56 +81,69 @@ export function LibraryShelf({
               : "";
 
             return (
-              <button
+              <article
                 key={item.mediaKey}
-                type="button"
-                onClick={() => onSelect(item)}
                 className={cn(
-                  "group shrink-0 text-left transition-transform duration-300 hover:-translate-y-0.5",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15",
+                  "group shrink-0",
                   recent ? "w-[168px]" : collectible ? "w-[140px]" : widthClass,
                 )}
               >
-                <LibraryArchiveCover
-                  cover={item.cover}
-                  title={item.title}
+                <button
+                  type="button"
+                  onClick={() => onSelect(item)}
                   className={cn(
-                    "rounded-[16px]",
-                    "transition-transform duration-300 group-hover:brightness-[1.03]",
+                    "w-full text-left transition-transform duration-300 hover:-translate-y-0.5",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15",
                   )}
-                />
-                <div className="mt-3 space-y-1 px-0.5">
-                  <p className="line-clamp-2 text-[13px] font-medium leading-snug text-white/88">
-                    {item.title}
-                  </p>
-                  <p className="truncate text-[12px] text-white/40">
-                    {item.creator}
-                  </p>
-                  <div className="flex items-center gap-1.5 pt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">
-                    <MediaIcon
-                      type={item.type}
-                      className="size-3"
-                      style={{ opacity: 0.6 }}
-                    />
-                    <span>{CONTENT_TYPE_LABELS[item.type]}</span>
-                  </div>
-                  {recent ? (
-                    <>
-                      <LibraryMoodTags tags={moodTags} className="pt-1.5" />
-                      {addedDate ? (
-                        <p className="pt-1 font-label text-[10px] tracking-[0.04em] text-white/30">
-                          Added {addedDate}
-                        </p>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {showReason && getReason?.(item) ? (
-                    <p className="pt-0.5 text-[11px] text-white/32">
-                      {getReason(item)}
+                >
+                  <LibraryArchiveCover
+                    cover={item.cover}
+                    title={item.title}
+                    className={cn(
+                      "rounded-[16px]",
+                      "transition-transform duration-300 group-hover:brightness-[1.03]",
+                    )}
+                  />
+                  <div className="mt-3 space-y-1 px-0.5">
+                    <p className="line-clamp-2 text-[13px] font-medium leading-snug text-white/88">
+                      {item.title}
                     </p>
-                  ) : null}
-                </div>
-              </button>
+                    <p className="truncate text-[12px] text-white/40">
+                      {item.creator}
+                    </p>
+                    <div className="flex items-center gap-1.5 pt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">
+                      <MediaIcon
+                        type={item.type}
+                        className="size-3"
+                        style={{ opacity: 0.6 }}
+                      />
+                      <span>{CONTENT_TYPE_LABELS[item.type]}</span>
+                    </div>
+                    {recent ? (
+                      <>
+                        <LibraryMoodTags tags={moodTags} className="pt-1.5" />
+                        {addedDate ? (
+                          <p className="pt-1 font-label text-[10px] tracking-[0.04em] text-white/30">
+                            Added {addedDate}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                    {showReason && getReason?.(item) ? (
+                      <p className="pt-0.5 text-[11px] text-white/32">
+                        {getReason(item)}
+                      </p>
+                    ) : null}
+                  </div>
+                </button>
+                {showQuickActions ? (
+                  <LibraryCardQuickActions
+                    item={item}
+                    density="compact"
+                    className="mt-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
+                  />
+                ) : null}
+              </article>
             );
           })}
         </div>

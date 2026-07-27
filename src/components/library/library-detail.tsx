@@ -12,10 +12,14 @@ import { LibraryPanelShell } from "@/components/library/library-panel-shell";
 import { deriveLibraryMoodTags } from "@/components/library/library-visual-utils";
 import { WorkStatusActions } from "@/components/work-status-actions";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
+import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
 import { getLibraryLabels, PROGRESS_COLORS } from "@/lib/library/library-labels";
 import { useLibraryItemActions } from "@/lib/library/use-library-actions";
 import type { LibraryItem } from "@/lib/library/library-types";
+import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
+import { resolveCoverUrl } from "@/lib/work/cover-url";
+import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
 import { cn } from "@/lib/utils";
 
 type LibraryDetailProps = {
@@ -47,6 +51,8 @@ export function LibraryDetailContent({
   const labels = getLibraryLabels(item.type);
   const actions = useLibraryItemActions(item);
   const moodTags = deriveLibraryMoodTags(item);
+  const imported = getImportedWorkById(item.mediaKey);
+  const cover = resolveCoverUrl(imported?.coverUrl, item.cover);
 
   const [panel, setPanel] = useState<"main" | "rating" | "progress">("main");
   const [rating, setRating] = useState(item.rating ?? 4);
@@ -94,7 +100,7 @@ export function LibraryDetailContent({
     <div className="md:flex md:gap-8 md:pr-6">
       <div className="mx-auto w-[180px] shrink-0 md:mx-0 md:w-[210px]">
         <LibraryArchiveCover
-          cover={item.cover}
+          cover={cover}
           title={item.title}
           className="rounded-[16px]"
         />
@@ -253,7 +259,7 @@ export function LibraryDetailContent({
               type={item.type}
               title={item.title}
               creator={item.creator}
-              cover={item.cover}
+              cover={cover}
               variant="panel"
             />
             <div className="flex flex-wrap gap-2">
@@ -271,7 +277,16 @@ export function LibraryDetailContent({
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push("/calendar")}
+                  onClick={() =>
+                    openJournalQuickLog(item.mediaKey, {
+                      snapshot: {
+                        title: item.title,
+                        creator: item.creator,
+                        type: item.type,
+                        cover,
+                      },
+                    })
+                  }
                   className="rounded-full border border-white/14 px-5 py-2.5 text-sm text-white/72"
                 >
                   Add to Journal
@@ -300,8 +315,24 @@ export function LibraryDetailContent({
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push("/calendar")}
+                  onClick={() =>
+                    openJournalQuickLog(item.mediaKey, {
+                      snapshot: {
+                        title: item.title,
+                        creator: item.creator,
+                        type: item.type,
+                        cover,
+                      },
+                    })
+                  }
                   className="rounded-full border border-white/10 px-4 py-2.5 text-sm text-white/62"
+                >
+                  Add to Journal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/calendar")}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm text-white/48"
                 >
                   View in Journal
                 </button>
@@ -312,8 +343,24 @@ export function LibraryDetailContent({
               <>
                 <button
                   type="button"
-                  onClick={() => router.push("/calendar")}
+                  onClick={() =>
+                    openJournalQuickLog(item.mediaKey, {
+                      snapshot: {
+                        title: item.title,
+                        creator: item.creator,
+                        type: item.type,
+                        cover,
+                      },
+                    })
+                  }
                   className="rounded-full border border-white/14 px-5 py-2.5 text-sm text-white/72"
+                >
+                  Add to Journal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/calendar")}
+                  className="rounded-full border border-white/10 px-4 py-2.5 text-sm text-white/48"
                 >
                   View in Journal
                 </button>
@@ -333,12 +380,28 @@ export function LibraryDetailContent({
             {item.status === "DROPPED" && (
               <button
                 type="button"
-                onClick={() => router.push("/calendar")}
+                onClick={() =>
+                  openJournalQuickLog(item.mediaKey, {
+                    snapshot: {
+                      title: item.title,
+                      creator: item.creator,
+                      type: item.type,
+                      cover,
+                    },
+                  })
+                }
                 className="rounded-full border border-white/14 px-5 py-2.5 text-sm text-white/72"
               >
                 Add to Journal
               </button>
             )}
+              <button
+                type="button"
+                onClick={() => navigateToWorkDetail(router, item.mediaKey)}
+                className="rounded-full border border-white/10 px-4 py-2.5 text-sm text-white/48 transition-colors hover:text-white/70"
+              >
+                View Details →
+              </button>
             </div>
           </div>
         )}

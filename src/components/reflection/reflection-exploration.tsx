@@ -6,7 +6,7 @@ type ReflectionExplorationProps = {
 
 export function ReflectionExploration({ reflection }: ReflectionExplorationProps) {
   return (
-    <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
+    <section className="muse-dark-panel rounded-[24px] bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
       <h2 className="text-sm font-medium text-white/62">Next Exploration</h2>
       <p className="mt-2 text-sm text-white/42">Based on your journey</p>
 

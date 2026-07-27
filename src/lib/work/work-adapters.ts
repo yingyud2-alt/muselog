@@ -1,8 +1,11 @@
 import type { Content, ContentType } from "@/lib/content/types";
 import type { LibraryItem, LibraryMediaType } from "@/lib/library/library-types";
 import type { UserMediaStatus } from "@/lib/content/user-media-state";
+import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
+import { getDisplayTodayString } from "@/lib/habit/habit-utils";
 import type { MediaItem, MediaStatus, MediaType } from "@/types/media";
 import type {
+  ExternalRating,
   Work,
   WorkTimeline,
   WorkType,
@@ -14,6 +17,63 @@ import {
 } from "@/lib/work/work-status";
 
 const DEFAULT_COVER = "from-slate-800 via-slate-900 to-black";
+
+/**
+ * Normalize a provider rating payload into ExternalRating.
+ * Returns null when value/scale are unusable — safe for future API mappers.
+ */
+export function toExternalRating(input: {
+  source: string;
+  value: number;
+  scale: number;
+  count?: number;
+}): ExternalRating | null {
+  const source = input.source?.trim();
+  if (!source) return null;
+  if (!Number.isFinite(input.value) || !Number.isFinite(input.scale)) {
+    return null;
+  }
+  if (input.scale <= 0) return null;
+
+  const count =
+    typeof input.count === "number" &&
+    Number.isFinite(input.count) &&
+    input.count >= 0
+      ? input.count
+      : undefined;
+
+  return {
+    source,
+    value: input.value,
+    scale: input.scale,
+    ...(count !== undefined ? { count } : {}),
+  };
+}
+
+/** Dedupe by source (later entries win). Drops invalid rows. */
+export function normalizeExternalRatings(
+  ratings: ExternalRating[] | undefined | null,
+): ExternalRating[] | undefined {
+  if (!ratings?.length) return undefined;
+
+  const bySource = new Map<string, ExternalRating>();
+  for (const row of ratings) {
+    const next = toExternalRating(row);
+    if (!next) continue;
+    bySource.set(next.source.toLowerCase(), next);
+  }
+
+  if (bySource.size === 0) return undefined;
+  return Array.from(bySource.values());
+}
+
+/** Merge external ratings by source; overlay wins on conflict. */
+export function mergeExternalRatings(
+  base?: ExternalRating[],
+  overlay?: ExternalRating[],
+): ExternalRating[] | undefined {
+  return normalizeExternalRatings([...(base ?? []), ...(overlay ?? [])]);
+}
 
 export function toWorkType(
   type: ContentType | LibraryMediaType | MediaType | string,
@@ -114,7 +174,9 @@ export function contentToWork(
     userNotes: partial?.userNotes ?? "",
     moodTags: partial?.moodTags ?? content.tags.slice(0, 4),
     aiInsights: partial?.aiInsights,
+    enrichment: partial?.enrichment,
     releaseDate: partial?.releaseDate,
+    externalRatings: normalizeExternalRatings(partial?.externalRatings),
     source: partial?.source ?? content.source,
     externalId: partial?.externalId,
     metadata: partial?.metadata,
@@ -129,7 +191,7 @@ export function libraryItemToWork(item: LibraryItem): Work {
     type: toWorkType(item.type),
     title: item.title,
     creator: item.creator,
-    coverUrl: item.cover || DEFAULT_COVER,
+    coverUrl: item.cover?.trim() || DEFAULT_COVER,
     description: item.shortReview ?? item.notes ?? "",
     genres: [],
     userStatus,
@@ -140,7 +202,9 @@ export function libraryItemToWork(item: LibraryItem): Work {
     rating: item.rating,
     review: item.shortReview,
     droppedReason:
-      item.status === "DROPPED" ? item.notes ?? item.shortReview : undefined,
+      item.status === "DROPPED"
+        ? item.notes ?? item.shortReview
+        : undefined,
   };
 }
 
@@ -205,10 +269,10 @@ export function workToMediaItem(
 ): MediaItem {
   const status = work.userStatus ?? work.userState;
   const date =
-    work.timeline.endDate ??
-    work.timeline.startDate ??
-    extras?.date ??
-    new Date().toISOString().slice(0, 10);
+    normalizeCalendarDate(work.timeline.endDate) ??
+    normalizeCalendarDate(work.timeline.startDate) ??
+    normalizeCalendarDate(extras?.date) ??
+    getDisplayTodayString();
 
   return {
     id: extras?.id ?? `journal-${work.id}`,
@@ -223,8 +287,8 @@ export function workToMediaItem(
     note: work.review ?? work.userNotes,
     notes: work.userNotes,
     tags: work.moodTags.length > 0 ? work.moodTags : work.genres,
-    startDate: work.timeline.startDate ?? date,
-    endDate: work.timeline.endDate ?? date,
+    startDate: normalizeCalendarDate(work.timeline.startDate) ?? date,
+    endDate: normalizeCalendarDate(work.timeline.endDate) ?? date,
     duration: work.timeline.duration,
     ...extras,
   };
@@ -254,7 +318,12 @@ export function mergeWorks(base: Work, overlay: Partial<Work>): Work {
     rating: overlay.rating ?? base.rating,
     review: overlay.review ?? base.review,
     droppedReason: overlay.droppedReason ?? base.droppedReason,
+    externalRatings: mergeExternalRatings(
+      base.externalRatings,
+      overlay.externalRatings,
+    ),
     aiInsights: overlay.aiInsights ?? base.aiInsights,
+    enrichment: overlay.enrichment ?? base.enrichment,
     source: overlay.source ?? base.source,
     externalId: overlay.externalId ?? base.externalId,
     metadata: overlay.metadata ?? base.metadata,

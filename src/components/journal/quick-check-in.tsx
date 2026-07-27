@@ -9,6 +9,7 @@ import {
   MEDIA_ACTION_PANEL_CLASS,
 } from "@/components/shared/media-action-modal";
 import { MEDIA_TYPE_LABELS } from "@/lib/calendar/constants";
+import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
 import { journalAccent } from "@/lib/preferences/journal-accent-classes";
@@ -82,17 +83,18 @@ function buildCheckInEntry(
   durationMinutes: number,
   date: string,
 ): MediaItem {
+  const calendarDate = date;
   return {
-    id: `checkin-${type}-${date}-${Date.now()}`,
+    id: `checkin-${type}-${calendarDate}-${Date.now()}`,
     type,
     title: TYPE_TITLES[type],
     creator: "Today",
     cover: TYPE_COVERS[type],
     rating: 0,
     status: "READING",
-    date,
-    startDate: date,
-    endDate: date,
+    date: calendarDate,
+    startDate: calendarDate,
+    endDate: calendarDate,
     quote: "",
     note: "Checked in",
     tags: ["check-in"],
@@ -134,7 +136,8 @@ function QuickCheckInForm({
     if (!type || !resolvedMinutes || resolvedMinutes < 1) return;
 
     setSaving(true);
-    const today = getDisplayTodayString();
+    const today =
+      normalizeCalendarDate(getDisplayTodayString()) ?? getDisplayTodayString();
     addEntry(buildCheckInEntry(type, resolvedMinutes, today));
     setSaving(false);
     setSaved(true);

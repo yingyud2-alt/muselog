@@ -4,7 +4,7 @@ type ReflectionHeaderProps = {
 
 export function ReflectionHeader({ monthYear }: ReflectionHeaderProps) {
   return (
-    <header className="rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-teal-950/20 via-white/[0.03] to-slate-950/40 p-6 backdrop-blur-sm md:p-8">
+    <header className="muse-dark-panel rounded-[28px] bg-gradient-to-br from-teal-950/20 via-white/[0.03] to-slate-950/40 p-6 backdrop-blur-sm md:p-8">
       <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 md:text-[11px]">
         {monthYear.split(" ")[0]} Reflection
       </p>

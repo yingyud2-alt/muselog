@@ -23,10 +23,16 @@ import { CONTENT_TYPE_LABELS, CREATOR_LABELS } from "@/lib/content/constants";
 import {
   closeAllDetails,
   closeDetail,
+  openJournalQuickLog,
   type WorkPreviewSnapshot,
 } from "@/lib/detail/detail-overlay-store";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
+import { resolveCoverUrl } from "@/lib/work/cover-url";
+import {
+  getImportedWorkById,
+  useImportedWorkMap,
+} from "@/lib/work/imported-work-catalog";
 import { resolveWorkRouteId } from "@/lib/work/work-route";
 
 type WorkPreviewModalProps = {
@@ -58,37 +64,47 @@ export function WorkPreviewModal({
     [workId],
   );
   const { getItemByKey } = useLibraryItems();
+  const importedMap = useImportedWorkMap();
   const libraryItem = resolvedId ? getItemByKey(resolvedId) : null;
   const catalog = resolvedId
     ? (getContentById(resolvedId) ?? getContentByMediaKey(resolvedId))
+    : null;
+  const imported = resolvedId
+    ? (importedMap[resolvedId] ?? getImportedWorkById(resolvedId))
     : null;
 
   const title =
     recommendation?.title ??
     libraryItem?.title ??
     catalog?.title ??
+    imported?.title ??
     snapshot?.title ??
     "Work preview";
   const creator =
     recommendation?.creator ??
     libraryItem?.creator ??
     catalog?.creator ??
+    imported?.creator ??
     snapshot?.creator ??
     "";
   const type =
     recommendation?.type ??
     libraryItem?.type ??
     catalog?.type ??
+    (imported ? "BOOK" : undefined) ??
     snapshot?.type ??
     "BOOK";
-  const cover =
-    recommendation?.cover ??
-    libraryItem?.cover ??
-    catalog?.cover ??
-    snapshot?.cover ??
-    "from-slate-800 via-slate-900 to-black";
+  // Field used by LibraryArchiveCover is `cover` (prop), fed by Work.coverUrl.
+  const cover = resolveCoverUrl(
+    imported?.coverUrl,
+    snapshot?.cover,
+    recommendation?.cover,
+    libraryItem?.cover,
+    catalog?.cover,
+  );
   const description =
     catalog?.description ??
+    imported?.description ??
     snapshot?.description ??
     libraryItem?.shortReview ??
     libraryItem?.notes ??
@@ -97,6 +113,7 @@ export function WorkPreviewModal({
     recommendation?.tags?.slice(0, 4) ??
     (libraryItem ? deriveLibraryMoodTags(libraryItem) : null) ??
     catalog?.tags?.slice(0, 4) ??
+    imported?.genres?.slice(0, 4) ??
     snapshot?.tags?.slice(0, 4) ??
     [];
 
@@ -190,8 +207,17 @@ export function WorkPreviewModal({
               <button
                 type="button"
                 onClick={() => {
-                  closeAllDetails();
-                  router.push("/calendar");
+                  if (!resolvedId) return;
+                  openJournalQuickLog(resolvedId, {
+                    snapshot: {
+                      title,
+                      creator,
+                      type,
+                      cover,
+                      tags: moodTags,
+                      description,
+                    },
+                  });
                 }}
                 className="rounded-full border border-white/14 px-5 py-2.5 text-sm text-white/72"
               >

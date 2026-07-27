@@ -20,7 +20,7 @@ export function ReflectionExitNav({ className }: ReflectionExitNavProps) {
       <Link
         href="/calendar"
         className={cn(
-          "inline-flex items-center justify-center rounded-2xl border border-white/[0.1]",
+          "inline-flex items-center justify-center rounded-2xl muse-dark-panel",
           "bg-white/[0.045] px-5 py-3 font-display text-[13px] font-bold text-white/72",
           "shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md",
           "transition-colors hover:bg-white/[0.08] hover:text-white/90",
@@ -32,7 +32,7 @@ export function ReflectionExitNav({ className }: ReflectionExitNavProps) {
       <Link
         href="/profile#full-reflection"
         className={cn(
-          "inline-flex items-center justify-center rounded-2xl border border-white/[0.1]",
+          "inline-flex items-center justify-center rounded-2xl muse-dark-panel",
           "bg-white/[0.045] px-5 py-3 font-display text-[13px] font-bold text-white/72",
           "shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md",
           "transition-colors hover:bg-white/[0.08] hover:text-white/90",

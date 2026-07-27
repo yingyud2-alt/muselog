@@ -1,17 +1,26 @@
 "use client";
 
 import { ContentCoverImage } from "@/components/explore/content-cover";
-import { getContentsByIds } from "@/lib/content/content-data";
-import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
-import type { CuratedList } from "@/lib/content/types";
+import type { Content, CuratedList } from "@/lib/content/types";
+import { openExploreContent } from "@/lib/explore/open-explore-work";
+import { getExploreContentsByIds } from "@/lib/explore/explore-public-catalog";
 import { cn } from "@/lib/utils";
 
 type CuratedListCardProps = {
   list: CuratedList;
 };
 
+/**
+ * Renders a curated list shell. Item ids come from the Explore adapter
+ * (API work ids when public catalog is available; mock ids only as fallback).
+ */
 export function CuratedListCard({ list }: CuratedListCardProps) {
-  const previewItems = getContentsByIds(list.items).slice(0, 3);
+  const previewItems = getExploreContentsByIds(list.items).slice(0, 3);
+  const coverContent = {
+    title: list.title,
+    cover: previewItems[0]?.cover || list.cover,
+    coverUrl: previewItems[0]?.cover || list.cover,
+  };
 
   return (
     <article
@@ -20,10 +29,7 @@ export function CuratedListCard({ list }: CuratedListCardProps) {
         "backdrop-blur-md transition-colors hover:border-white/15 hover:bg-white/[0.06]",
       )}
     >
-      <ContentCoverImage
-        content={{ title: list.title, cover: list.cover }}
-        variant="list"
-      />
+      <ContentCoverImage content={coverContent} variant="list" />
 
       <div className="space-y-3 p-4">
         <div>
@@ -34,12 +40,13 @@ export function CuratedListCard({ list }: CuratedListCardProps) {
         </div>
 
         <ul className="space-y-1.5 border-t border-white/8 pt-3">
-          {previewItems.map((item) => (
+          {previewItems.map((item: Content) => (
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => openWorkDetail(item.id)}
-                className="text-left text-sm text-white/62 transition-colors hover:text-white/88"
+                onClick={() => openExploreContent(item)}
+                aria-label={`Open ${item.title}`}
+                className="w-full rounded-md px-1 py-1.5 text-left text-sm text-white/62 transition-colors hover:bg-white/[0.04] hover:text-white/88"
               >
                 {item.title}
               </button>

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 
+import { DARK_FLOATING_PANEL_CLASS } from "@/lib/ui/dark-panel";
 import { cn } from "@/lib/utils";
 
 /** Translucent overlay — homepage / bubbles stay visible underneath */
@@ -10,7 +11,8 @@ export const MEDIA_ACTION_OVERLAY_CLASS =
   "fixed inset-0 z-50 bg-[#090A0F]/40 backdrop-blur-[10px] saturate-[1.1]";
 
 export const MEDIA_ACTION_PANEL_CLASS = cn(
-  "border border-white/[0.1] bg-white/[0.055]",
+  DARK_FLOATING_PANEL_CLASS,
+  "bg-white/[0.055]",
   "shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-2xl",
 );
 

@@ -77,7 +77,7 @@ export function JournalAiReflectionCard({
     <section
       id="journal-ai-reflection"
       className={cn(
-        "scroll-mt-24 rounded-[24px] border border-white/[0.08] bg-white/[0.03]",
+        "muse-dark-panel scroll-mt-24 rounded-[24px] bg-white/[0.03]",
         "px-5 py-6 shadow-[0_14px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-7 md:py-7",
         className,
       )}

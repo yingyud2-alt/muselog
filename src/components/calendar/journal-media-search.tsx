@@ -19,7 +19,18 @@ type JournalMediaSearchProps = {
 
 function resolveCover(result: MediaSearchResult): string {
   const catalog = getContentByMediaKey(result.id);
-  return catalog?.cover ?? "from-slate-800 via-slate-900 to-black";
+  // Prefer API/search coverUrl (Open Library) over catalog gradients.
+  const fromApi = result.coverUrl?.trim();
+  if (
+    fromApi &&
+    (fromApi.startsWith("http://") ||
+      fromApi.startsWith("https://") ||
+      fromApi.startsWith("/") ||
+      fromApi.startsWith("data:"))
+  ) {
+    return fromApi;
+  }
+  return catalog?.cover ?? fromApi ?? "from-slate-800 via-slate-900 to-black";
 }
 
 export function JournalMediaSearch({

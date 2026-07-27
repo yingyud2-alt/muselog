@@ -1,10 +1,12 @@
+import {
+  getEntryCalendarDate,
+  normalizeCalendarDate,
+} from "@/lib/calendar/calendar-date";
 import type { JourneyColor, MediaItem, MediaType } from "@/types/media";
 import {
   JOURNEY_COLOR_STYLES,
   TYPE_JOURNEY_COLORS,
 } from "@/types/media";
-
-const DATE_STRING_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const LEGACY_JOURNEY_COLORS: Record<string, JourneyColor> = {
   cyan: "ocean",
@@ -15,16 +17,8 @@ const LEGACY_JOURNEY_COLORS: Record<string, JourneyColor> = {
 };
 
 export function isValidDateString(value?: string | null): value is string {
-  if (!value || !DATE_STRING_RE.test(value)) return false;
-
-  const [year, month, day] = value.split("-").map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-
-  return (
-    parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day
-  );
+  const normalized = normalizeCalendarDate(value);
+  return normalized !== null && normalized === value;
 }
 
 export function normalizeJourneyColor(
@@ -51,14 +45,14 @@ export function sanitizeMediaItem(
   if (!(type in TYPE_JOURNEY_COLORS)) return null;
 
   const fallbackDate =
-    (isValidDateString(raw.date) && raw.date) ||
-    (isValidDateString(raw.startDate) && raw.startDate) ||
-    null;
+    normalizeCalendarDate(raw.date) ||
+    normalizeCalendarDate(raw.startDate) ||
+    normalizeCalendarDate(raw.endDate);
 
   if (!fallbackDate) return null;
 
-  const start = isValidDateString(raw.startDate) ? raw.startDate : fallbackDate;
-  let end = isValidDateString(raw.endDate) ? raw.endDate : start;
+  const start = normalizeCalendarDate(raw.startDate) ?? fallbackDate;
+  let end = normalizeCalendarDate(raw.endDate) ?? start;
 
   if (end < start) {
     end = start;
@@ -74,6 +68,7 @@ export function sanitizeMediaItem(
     creator: raw.creator ?? "",
     rating: typeof raw.rating === "number" ? raw.rating : 0,
     status: raw.status ?? "READING",
+    // Canonical calendar day for grid matching.
     date: fallbackDate,
     quote: raw.quote ?? "",
     note: raw.note ?? raw.notes ?? "",
@@ -90,7 +85,7 @@ export function sanitizeMediaItem(
           : undefined,
     memories: Array.isArray(raw.memories) ? raw.memories : [],
     startDate: start,
-    endDate: end !== start ? end : undefined,
+    endDate: end,
     journeyColor: normalizeJourneyColor(
       raw.journeyColor ?? raw.color,
       fallbackColor,
@@ -109,20 +104,30 @@ export function filterJourneyItems(items: MediaItem[]): MediaItem[] {
 }
 
 export function getJourneyStart(item: MediaItem): string {
-  const start = item.startDate ?? item.date;
-  return isValidDateString(start) ? start : item.date;
+  return (
+    normalizeCalendarDate(item.startDate) ??
+    normalizeCalendarDate(item.date) ??
+    item.date
+  );
 }
 
 export function getJourneyEnd(item: MediaItem): string {
-  if (item.endDate && isValidDateString(item.endDate)) return item.endDate;
+  const end = normalizeCalendarDate(item.endDate);
+  if (end) return end;
   return getJourneyStart(item);
 }
 
+/**
+ * Cell sits inside a cultural experience window when
+ * startDate <= cell <= endDate.
+ */
 export function dateHasJournalMedia(date: string, items: MediaItem[]): boolean {
+  const cell = normalizeCalendarDate(date);
+  if (!cell) return false;
   return items.some((item) => {
     const start = getJourneyStart(item);
     const end = getJourneyEnd(item);
-    return date >= start && date <= end;
+    return cell >= start && cell <= end;
   });
 }
 
@@ -133,18 +138,21 @@ export function getJourneyColor(item: MediaItem): JourneyColor {
   );
 }
 
-/** Marker dot on key touchpoints only — not every day in range. */
+/** Marker on start / end / primary date. */
 export function dayHasMediaMarker(date: string, items: MediaItem[]): boolean {
+  const cell = normalizeCalendarDate(date);
+  if (!cell) return false;
   return items.some((item) => {
     const start = getJourneyStart(item);
     const end = getJourneyEnd(item);
-
-    return date === item.date || date === start || date === end;
+    const primary = getEntryCalendarDate(item);
+    return cell === start || cell === end || cell === primary;
   });
 }
 
 export function formatJourneyDay(date: string): string {
-  const [, month, day] = date.split("-").map(Number);
+  const normalized = normalizeCalendarDate(date) ?? date;
+  const [, month, day] = normalized.split("-").map(Number);
   const monthLabel = new Intl.DateTimeFormat("en-US", {
     month: "long",
     timeZone: "UTC",
@@ -199,12 +207,9 @@ export function mergeMediaWithJourneyOverrides(
       return item;
     }
 
-    const start = isValidDateString(override.startDate)
-      ? override.startDate
-      : getJourneyStart(item);
-    let end = isValidDateString(override.endDate)
-      ? override.endDate
-      : getJourneyEnd(item);
+    const start =
+      normalizeCalendarDate(override.startDate) ?? getJourneyStart(item);
+    let end = normalizeCalendarDate(override.endDate) ?? getJourneyEnd(item);
 
     if (end < start) {
       end = start;
@@ -212,8 +217,9 @@ export function mergeMediaWithJourneyOverrides(
 
     return {
       ...item,
+      date: start,
       startDate: start,
-      endDate: end !== start ? end : undefined,
+      endDate: end,
       journeyColor: normalizeJourneyColor(
         override.journeyColor,
         getJourneyColor(item),

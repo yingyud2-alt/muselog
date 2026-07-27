@@ -98,8 +98,13 @@ export function useCalendarMedia() {
 
   const baseItems = useMemo(() => {
     const mockIds = new Set(CALENDAR_MOCK_MEDIA.map((item) => item.id));
+    const userById = new Map(userEntries.map((item) => [item.id, item]));
+    // Prefer journal-store overrides of mock seeds (drag/resize persistence).
+    const mocks = CALENDAR_MOCK_MEDIA.map(
+      (item) => userById.get(item.id) ?? item,
+    );
     const added = userEntries.filter((item) => !mockIds.has(item.id));
-    return [...CALENDAR_MOCK_MEDIA, ...added];
+    return [...mocks, ...added];
   }, [userEntries]);
 
   const items = useMemo(

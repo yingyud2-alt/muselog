@@ -97,7 +97,7 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
             transition={{ type: "spring", damping: 32, stiffness: 340 }}
             className={cn(
               "fixed inset-x-0 bottom-0 z-50 flex max-h-[92svh] flex-col md:hidden",
-              "rounded-t-[24px] border border-white/12 border-b-0 bg-[#10161D]/96 backdrop-blur-2xl",
+              "muse-dark-panel rounded-t-[24px] border-b-0 bg-[#10161D]/96 backdrop-blur-2xl",
             )}
           >
             <div className="sticky top-0 z-20 flex shrink-0 items-center justify-end bg-[#10161D]/96 px-4 pb-2 pt-3">
@@ -231,7 +231,7 @@ export function MediaFloatingDetail({ item, onClose }: MediaFloatingDetailProps)
               initial={{ opacity: 0, y: 20, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.98 }}
-              className="pointer-events-auto flex w-full max-w-[720px] flex-row rounded-[24px] border border-white/12 bg-[#10161D]/94 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+              className="pointer-events-auto muse-dark-panel flex w-full max-w-[720px] flex-row rounded-[24px] bg-[#10161D]/94 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
             >
               <DesktopDetailContent
                 item={item}

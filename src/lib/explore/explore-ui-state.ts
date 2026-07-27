@@ -31,7 +31,16 @@ export function getExploreUiState(): ExploreUiState {
 }
 
 export function setExploreUiState(patch: Partial<ExploreUiState>) {
-  state = { ...state, ...patch };
+  const next = { ...state, ...patch };
+  // Skip no-op updates so ReturnContext restore does not reflow Explore to top.
+  if (
+    next.exploreMood === state.exploreMood &&
+    next.typeFilter === state.typeFilter &&
+    next.category === state.category
+  ) {
+    return;
+  }
+  state = next;
   emit();
 }
 

@@ -1,10 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { LibraryArchiveCover } from "@/components/library/library-archive-cover";
+import { LibraryCardQuickActions } from "@/components/library/library-card-quick-actions";
 import { MuseEmptyState } from "@/components/shared/muse-empty-state";
 import { formatJourneyDay } from "@/lib/calendar/journey-utils";
+import { useJournalEntries } from "@/lib/calendar/journal-store";
+import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
+import { resolveJournalItemId } from "@/lib/content/bubble-content-bridge";
 import { getLibraryLabels } from "@/lib/library/library-labels";
 import type { LibraryItem } from "@/lib/library/library-types";
 import { cn } from "@/lib/utils";
@@ -14,10 +19,33 @@ type CurrentlyExploringProps = {
   onSelect: (item: LibraryItem) => void;
 };
 
+function latestJournalMemory(
+  item: LibraryItem,
+  entriesById: Map<string, { note?: string; quote?: string }>,
+): string | null {
+  const entry = entriesById.get(resolveJournalItemId(item.mediaKey));
+  const fromJournal =
+    entry?.note?.trim() || entry?.quote?.trim() || null;
+  if (fromJournal) return fromJournal;
+
+  const fromLibrary =
+    item.shortReview?.trim() || item.notes?.trim() || null;
+  return fromLibrary;
+}
+
 export function CurrentlyExploring({
   items,
   onSelect,
 }: CurrentlyExploringProps) {
+  const { entries } = useJournalEntries();
+  const entriesById = useMemo(() => {
+    const map = new Map<string, { note?: string; quote?: string }>();
+    for (const entry of entries) {
+      map.set(entry.id, entry);
+    }
+    return map;
+  }, [entries]);
+
   return (
     <section className="space-y-5">
       <div className="space-y-1">
@@ -44,26 +72,31 @@ export function CurrentlyExploring({
             const startLine = item.startDate
               ? `Started ${formatJourneyDay(item.startDate)}`
               : "Just opened";
+            const memory = latestJournalMemory(item, entriesById);
 
             return (
-              <button
+              <article
                 key={item.mediaKey}
-                type="button"
-                onClick={() => onSelect(item)}
                 className={cn(
-                  "group border border-white/[0.07] bg-[#0E141C] p-4 text-left",
+                  "group border border-white/[0.07] bg-[#0E141C] p-4",
                   "rounded-[18px] transition-colors duration-300 hover:bg-[#121A24]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15",
                 )}
               >
-                <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => onSelect(item)}
+                  className="flex w-full gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15"
+                >
                   <LibraryArchiveCover
                     cover={item.cover}
                     title={item.title}
                     className="w-[88px] shrink-0 rounded-[12px]"
                   />
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <p className="truncate text-[16px] font-medium text-white/92">
+                    <p className="font-label text-[10px] uppercase tracking-[0.14em] text-white/32">
+                      {CONTENT_TYPE_LABELS[item.type]}
+                    </p>
+                    <p className="mt-1 truncate text-[16px] font-medium text-white/92">
                       {item.title}
                     </p>
                     <p className="mt-0.5 truncate text-sm text-white/42">
@@ -86,7 +119,7 @@ export function CurrentlyExploring({
                       />
                     </div>
 
-                    <div className="mt-auto flex items-center justify-between pt-3">
+                    <div className="mt-2 flex items-center justify-between">
                       <span className="text-[12px] tabular-nums text-white/38">
                         {progress > 0 ? `${progress}%` : "Just started"}
                       </span>
@@ -95,9 +128,25 @@ export function CurrentlyExploring({
                         <ArrowRight className="size-3.5" aria-hidden="true" />
                       </span>
                     </div>
+
+                    {memory ? (
+                      <p className="mt-3 line-clamp-2 font-quote text-[12px] leading-relaxed text-white/45">
+                        &ldquo;{memory}&rdquo;
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-[12px] text-white/28">
+                        No journal memory yet
+                      </p>
+                    )}
                   </div>
-                </div>
-              </button>
+                </button>
+
+                <LibraryCardQuickActions
+                  item={item}
+                  density="compact"
+                  className="mt-3 border-t border-white/[0.06] pt-3"
+                />
+              </article>
             );
           })}
         </div>

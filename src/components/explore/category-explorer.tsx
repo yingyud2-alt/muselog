@@ -1,10 +1,8 @@
 "use client";
 
 import { DiscoveryCarousel } from "@/components/explore/discovery-carousel";
-import {
-  DISCOVERY_CATEGORY_TABS,
-  getDiscoverySections,
-} from "@/lib/content/explore-discovery";
+import { DISCOVERY_CATEGORY_TABS } from "@/lib/content/explore-discovery";
+import { useExploreDiscoverySections } from "@/lib/explore/explore-public-catalog";
 import { useExploreUiState } from "@/lib/explore/explore-ui-state";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +12,7 @@ type CategoryExplorerProps = {
 
 export function CategoryExplorer({ className }: CategoryExplorerProps) {
   const { category, setCategory } = useExploreUiState();
-  const sections = getDiscoverySections(category);
+  const sections = useExploreDiscoverySections(category);
 
   return (
     <section className={cn("space-y-8", className)}>

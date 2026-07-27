@@ -29,6 +29,8 @@ export interface UserMediaState {
   rating?: number;
   shortReview?: string;
   notes?: string;
+  /** Reason when status is DROPPED. */
+  droppedReason?: string;
   startDate?: string;
   endDate?: string;
   addedToJournal: boolean;
@@ -117,6 +119,7 @@ function upsertState(mediaKey: string, partial: Partial<UserMediaState>) {
     rating: partial.rating ?? current?.rating,
     shortReview: partial.shortReview ?? current?.shortReview,
     notes: partial.notes ?? current?.notes,
+    droppedReason: partial.droppedReason ?? current?.droppedReason,
     startDate: partial.startDate ?? current?.startDate,
     endDate: partial.endDate ?? current?.endDate,
     addedToJournal: partial.addedToJournal ?? current?.addedToJournal ?? false,
@@ -125,7 +128,11 @@ function upsertState(mediaKey: string, partial: Partial<UserMediaState>) {
     updatedAt: now,
     title: partial.title ?? current?.title,
     creator: partial.creator ?? current?.creator,
-    cover: partial.cover ?? current?.cover,
+    // Empty string must not wipe a previously saved remote cover URL.
+    cover:
+      typeof partial.cover === "string" && partial.cover.trim()
+        ? partial.cover.trim()
+        : current?.cover,
     mediaType: partial.mediaType ?? current?.mediaType,
     quote: partial.quote ?? current?.quote,
   };

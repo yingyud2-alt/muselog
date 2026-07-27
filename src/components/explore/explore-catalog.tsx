@@ -1,24 +1,22 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { ContentCard } from "@/components/explore/content-card";
 import { CuratedListCard } from "@/components/explore/curated-list-card";
 import { MuseEmptyState } from "@/components/shared/muse-empty-state";
-import { useReturnSnapshot } from "@/hooks/use-return-snapshot";
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import {
   contentMatchesExploreMood,
   EXPLORE_MOODS,
-  type ExploreMood,
 } from "@/lib/content/constants";
-import { CURATED_LISTS } from "@/lib/content/curated-lists";
 import { useAllMemories } from "@/lib/content/memory-store";
 import type { ContentType } from "@/lib/content/types";
-import type { DiscoveryCategory } from "@/lib/content/explore-discovery";
+import {
+  useExploreContentCatalog,
+  useExploreCuratedLists,
+} from "@/lib/explore/explore-public-catalog";
+import { toExploreDataLog } from "@/lib/explore/explore-content-provider";
 import { useExploreUiState } from "@/lib/explore/explore-ui-state";
-import { useMediaSearch } from "@/hooks/use-media-search";
-import type { ReturnContext } from "@/lib/navigation/return-context";
 import { cn } from "@/lib/utils";
 
 const TYPE_FILTERS: Array<{ value: "all" | ContentType; label: string }> = [
@@ -28,68 +26,16 @@ const TYPE_FILTERS: Array<{ value: "all" | ContentType; label: string }> = [
   { value: "MUSIC", label: "Music" },
 ];
 
-const VALID_MOODS = new Set<ExploreMood>(["quiet", "nostalgic", "curious"]);
-const VALID_TYPES = new Set<"all" | ContentType>([
-  "all",
-  "BOOK",
-  "MOVIE",
-  "MUSIC",
-]);
-const VALID_CATEGORIES = new Set<DiscoveryCategory>(["book", "film", "music"]);
-
 export function ExploreCatalog() {
   const {
     exploreMood,
     typeFilter,
-    category,
     setExploreMood,
     setTypeFilter,
-    patchExploreUi,
   } = useExploreUiState();
-  const { query: searchQuery, setQuery } = useMediaSearch();
   const { memories } = useAllMemories();
-
-  const restoreExploreUi = useCallback(
-    (context: ReturnContext) => {
-      const explore = context.pageState?.explore;
-      if (!explore) return;
-
-      const nextMood = explore.exploreMood as ExploreMood | undefined;
-      const nextType = explore.typeFilter as ("all" | ContentType) | undefined;
-      const nextCategory = explore.category as DiscoveryCategory | undefined;
-
-      patchExploreUi({
-        ...(nextMood && VALID_MOODS.has(nextMood)
-          ? { exploreMood: nextMood }
-          : {}),
-        ...(nextType && VALID_TYPES.has(nextType)
-          ? { typeFilter: nextType }
-          : {}),
-        ...(nextCategory && VALID_CATEGORIES.has(nextCategory)
-          ? { category: nextCategory }
-          : {}),
-      });
-
-      if (typeof explore.searchQuery === "string") {
-        setQuery(explore.searchQuery);
-      }
-    },
-    [patchExploreUi, setQuery],
-  );
-
-  const exploreSnapshot = useMemo(
-    () => ({
-      explore: {
-        exploreMood,
-        typeFilter,
-        category,
-        searchQuery,
-      },
-    }),
-    [exploreMood, typeFilter, category, searchQuery],
-  );
-
-  useReturnSnapshot(exploreSnapshot, restoreExploreUi);
+  const catalog = useExploreContentCatalog();
+  const curatedLists = useExploreCuratedLists();
 
   const savedIds = useMemo(
     () => new Set(memories.map((memory) => memory.contentId)),
@@ -97,14 +43,30 @@ export function ExploreCatalog() {
   );
 
   const items = useMemo(() => {
-    return CONTENT_CATALOG.filter((item) => {
+    const filtered = catalog.filter((item) => {
       const matchesMood = contentMatchesExploreMood(item.tags, exploreMood);
       const matchesType =
         typeFilter === "all" ? true : item.type === typeFilter;
 
       return matchesMood && matchesType;
     });
-  }, [exploreMood, typeFilter]);
+
+    // API-first books may not carry mock mood tags for every hit —
+    // if the mood filter empties the grid, show type-matched API works.
+    if (filtered.length === 0 && catalog.length > 0) {
+      return catalog.filter((item) =>
+        typeFilter === "all" ? true : item.type === typeFilter,
+      );
+    }
+
+    return filtered;
+  }, [catalog, exploreMood, typeFilter]);
+
+  useEffect(() => {
+    // Temporary runtime verification — Open Library vs mock.
+    // eslint-disable-next-line no-console
+    console.log("EXPLORE DATA", toExploreDataLog(items));
+  }, [items]);
 
   return (
     <div className="space-y-10">
@@ -139,7 +101,7 @@ export function ExploreCatalog() {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {CURATED_LISTS.map((list) => (
+          {curatedLists.map((list) => (
             <CuratedListCard key={list.id} list={list} />
           ))}
         </div>
@@ -182,7 +144,7 @@ export function ExploreCatalog() {
             actionHref="/explore"
           />
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {items.map((content) => (
               <ContentCard
                 key={content.id}

@@ -85,6 +85,7 @@ export function WaitingShelf({ items, onSelect }: WaitingShelfProps) {
           variant="collectible"
           showReason
           getReason={getLibraryItemReason}
+          showQuickActions
         />
       )}
     </section>

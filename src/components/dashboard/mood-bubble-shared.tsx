@@ -386,7 +386,7 @@ export function RecommendationModal({
             transition={{ type: "spring", damping: 32, stiffness: 360 }}
             className={cn(
               "fixed inset-x-0 bottom-0 z-50 flex max-h-[88svh] flex-col overflow-y-auto md:hidden",
-              "rounded-t-[28px] border border-white/12 border-b-0 p-6 text-center text-white backdrop-blur-2xl",
+              "muse-dark-panel rounded-t-[28px] border-b-0 p-6 text-center text-white backdrop-blur-2xl",
             )}
             style={{
               background: selectedModalStyles.background,

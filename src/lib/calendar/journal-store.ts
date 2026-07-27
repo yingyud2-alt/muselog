@@ -62,14 +62,44 @@ export function useJournalEntries() {
 
   const addEntry = useCallback((entry: MediaItem) => {
     ensureInit();
-    const next = [...cached.filter((item) => item.id !== entry.id), entry];
+    const sanitized = sanitizeMediaItem(entry);
+    if (!sanitized) return;
+    const next = [
+      ...cached.filter((item) => item.id !== sanitized.id),
+      sanitized,
+    ];
     write(next);
   }, []);
+
+  const updateEntry = useCallback(
+    (entryId: string, partial: Partial<MediaItem>) => {
+      ensureInit();
+      const existing = cached.find((item) => item.id === entryId);
+      if (!existing) return;
+      const sanitized = sanitizeMediaItem({ ...existing, ...partial, id: entryId });
+      if (!sanitized) return;
+      write(
+        cached.map((item) => (item.id === entryId ? sanitized : item)),
+      );
+    },
+    [],
+  );
 
   const removeEntry = useCallback((entryId: string) => {
     ensureInit();
     write(cached.filter((item) => item.id !== entryId));
   }, []);
 
-  return { entries, addEntry, removeEntry };
+  return { entries, addEntry, updateEntry, removeEntry };
+}
+
+/** Imperative upsert used by calendar drag/resize (same store). */
+export function upsertJournalEntry(entry: MediaItem) {
+  ensureInit();
+  const sanitized = sanitizeMediaItem(entry);
+  if (!sanitized) return;
+  write([
+    ...cached.filter((item) => item.id !== sanitized.id),
+    sanitized,
+  ]);
 }

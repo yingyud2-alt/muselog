@@ -1,4 +1,7 @@
 import {
+  normalizeCalendarDate,
+} from "@/lib/calendar/calendar-date";
+import {
   filterJourneyItems,
   getJourneyEnd,
   getJourneyStart,
@@ -44,6 +47,10 @@ function assignGlobalItemLanes(items: MediaItem[]): Map<string, number> {
   return itemLanes;
 }
 
+/**
+ * Place journey bars by normalized start/end YYYY-MM-DD.
+ * Quick Memory (date === startDate === endDate) lands on that single cell.
+ */
 export function computeJourneySegments(
   items: MediaItem[],
   weeks: CalendarWeek[],
@@ -63,10 +70,10 @@ export function computeJourneySegments(
       let endCol: number | null = null;
 
       for (let col = 0; col < week.days.length; col += 1) {
-        const cell = week.days[col];
-        if (!cell.date) continue;
+        const cellDate = normalizeCalendarDate(week.days[col]?.date);
+        if (!cellDate) continue;
 
-        if (cell.date >= start && cell.date <= end) {
+        if (cellDate >= start && cellDate <= end) {
           if (startCol === null) startCol = col;
           endCol = col;
         }
@@ -80,8 +87,12 @@ export function computeJourneySegments(
         weekIndex,
         startCol,
         endCol,
-        isRangeStart: week.days.some((cell) => cell.date === start),
-        isRangeEnd: week.days.some((cell) => cell.date === end),
+        isRangeStart: week.days.some(
+          (cell) => normalizeCalendarDate(cell.date) === start,
+        ),
+        isRangeEnd: week.days.some(
+          (cell) => normalizeCalendarDate(cell.date) === end,
+        ),
         lane,
       });
       result.set(weekIndex, existing);
@@ -92,13 +103,16 @@ export function computeJourneySegments(
 }
 
 export const MOBILE_JOURNAL_OVERLAY = {
-  dateZoneHeight: 22,
-  laneStep: 18,
-  trackHeight: 18,
+  /** Space reserved under covers for period lines. */
+  lineZoneHeight: 8,
+  laneStep: 4,
+  trackHeight: 8,
+  dateZoneHeight: 18,
 } as const;
 
 export const DESKTOP_JOURNAL_OVERLAY = {
-  dateZoneHeight: 28,
-  laneStep: 34,
-  trackHeight: 34,
+  lineZoneHeight: 10,
+  laneStep: 5,
+  trackHeight: 10,
+  dateZoneHeight: 20,
 } as const;

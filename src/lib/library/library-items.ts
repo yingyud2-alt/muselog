@@ -21,6 +21,8 @@ import type {
   UserMediaState,
   UserMediaStatus,
 } from "@/lib/content/user-media-state";
+import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
+import { resolveCoverUrl } from "@/lib/work/cover-url";
 import type { MediaItem, MediaStatus } from "@/types/media";
 
 function memoryStatusToUser(status: Memory["status"]): UserMediaStatus {
@@ -89,6 +91,7 @@ export function buildLibraryItems(
     const journal = journalByKey.get(mediaKey);
     const content = getContentByMediaKey(mediaKey);
     const userContent = getUserContentById(mediaKey);
+    const imported = getImportedWorkById(mediaKey);
     const status = resolveStatus(stored, memory, journal);
 
     if (status === "NONE") continue;
@@ -97,6 +100,13 @@ export function buildLibraryItems(
       content?.type ??
       userContent?.type ??
       stored?.mediaType ??
+      (imported
+        ? imported.type === "movie"
+          ? "MOVIE"
+          : imported.type === "music"
+            ? "MUSIC"
+            : "BOOK"
+        : undefined) ??
       (journal?.type === "book"
         ? "BOOK"
         : journal?.type === "movie"
@@ -107,18 +117,26 @@ export function buildLibraryItems(
       content?.title ??
       userContent?.title ??
       stored?.title ??
+      imported?.title ??
       journal?.title ??
       "Untitled";
 
     const creator =
-      content?.creator ?? userContent?.creator ?? stored?.creator ?? journal?.creator ?? "";
+      content?.creator ??
+      userContent?.creator ??
+      stored?.creator ??
+      imported?.creator ??
+      journal?.creator ??
+      "";
 
-    const cover =
-      content?.cover ??
-      userContent?.cover ??
-      stored?.cover ??
-      journal?.cover ??
-      "from-slate-800 via-slate-900 to-black";
+    // Prefer Open Library / remote coverUrl over empty stored covers or gradients.
+    const cover = resolveCoverUrl(
+      stored?.cover,
+      imported?.coverUrl,
+      content?.cover,
+      userContent?.cover,
+      journal?.cover,
+    );
 
     items.push({
       mediaKey,
@@ -137,7 +155,7 @@ export function buildLibraryItems(
         stored?.shortReview ??
         journal?.note ??
         memory?.note,
-      notes: stored?.notes,
+      notes: stored?.droppedReason ?? stored?.notes,
       startDate:
         stored?.startDate ??
         journal?.startDate ??

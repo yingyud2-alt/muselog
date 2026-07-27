@@ -17,6 +17,8 @@ import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
 } from "@/lib/library/library-types";
+import { resolveCoverUrl } from "@/lib/work/cover-url";
+import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
 import {
   contentToWork,
   libraryItemToWork,
@@ -55,10 +57,29 @@ export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
     () =>
       allItems.map((item) => {
         const catalog = getContentByMediaKey(item.mediaKey);
+        const imported = getImportedWorkById(item.mediaKey);
         const fromLibrary = libraryItemToWork(item);
-        if (!catalog) return fromLibrary;
+        const coverUrl = resolveCoverUrl(
+          fromLibrary.coverUrl,
+          imported?.coverUrl,
+          catalog?.cover,
+        );
+
+        if (imported) {
+          return mergeWorks(imported, {
+            ...fromLibrary,
+            coverUrl,
+            description: fromLibrary.description || imported.description,
+          });
+        }
+
+        if (!catalog) {
+          return { ...fromLibrary, coverUrl };
+        }
+
         return mergeWorks(contentToWork(catalog), {
           ...fromLibrary,
+          coverUrl,
           description: fromLibrary.description || catalog.description,
           genres: catalog.tags,
           moodTags:

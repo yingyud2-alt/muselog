@@ -6,9 +6,19 @@ import type { Content, ContentType } from "@/lib/content/types";
 import type { UserContentItem } from "@/lib/content/user-content-store";
 import type { LibraryItem } from "@/lib/library/library-types";
 
+/**
+ * Local + remote media search.
+ * Priority when merging (see use-media-search):
+ *   API open_library > user library/memory > mock CONTENT_CATALOG fallback.
+ */
+
 export type MediaSearchMatchField = "title" | "creator" | "tag" | "note";
 
-export type MediaSearchSource = "catalog" | "library" | "memory";
+export type MediaSearchSource =
+  | "catalog"
+  | "library"
+  | "memory"
+  | "open_library";
 
 export type MediaSearchResult = {
   id: string;
@@ -19,6 +29,8 @@ export type MediaSearchResult = {
   matchField: MediaSearchMatchField;
   href: string;
   meta: string;
+  /** Optional cover for API / catalog rows (UI may ignore). */
+  coverUrl?: string;
 };
 
 /** @deprecated Use MediaSearchResult */
@@ -84,7 +96,29 @@ function matchContent(
 function sourceLabel(source: MediaSearchSource): string {
   if (source === "library") return "Library";
   if (source === "memory") return "Saved";
+  if (source === "open_library") return "Open Library";
   return "Explore";
+}
+
+/** Map an imported/API Work into the existing search result row shape. */
+export function workToMediaSearchResult(work: {
+  id: string;
+  title: string;
+  creator: string;
+  coverUrl?: string;
+}): MediaSearchResult {
+  return {
+    id: work.id,
+    title: work.title,
+    creator: work.creator,
+    type: "BOOK",
+    source: "open_library",
+    matchField: "title",
+    href: `/work/${work.id}`,
+    meta: `${sourceLabel("open_library")} · ${resolveContentMeta("BOOK", work.creator)}`,
+    // Preserve Open Library cover URL through Explore → modal snapshot.
+    coverUrl: work.coverUrl,
+  };
 }
 
 export function searchContentCatalog(query: string): SearchResult[] {
@@ -145,6 +179,7 @@ export function searchMedia(
       matchField,
       href: resolveHref(item.contentId, item.mediaKey),
       meta: `${sourceLabel("library")} · ${resolveContentMeta(resolveType(item), item.creator)}`,
+      coverUrl: item.cover,
     });
   }
 
@@ -182,6 +217,7 @@ export function searchMedia(
       matchField,
       href: resolveHref(catalog?.id ?? null, memory.contentId),
       meta: `${sourceLabel("memory")} · ${resolveContentMeta(type, creator)}`,
+      coverUrl: catalog?.cover ?? userContent?.cover,
     });
   }
 
@@ -192,6 +228,7 @@ export function searchMedia(
     if (!matchField) continue;
 
     seen.add(item.id);
+    // Mock catalog tier — lowest priority; API imports overlay in use-media-search.
     results.push({
       id: item.id,
       title: item.title,
@@ -201,6 +238,7 @@ export function searchMedia(
       matchField,
       href: `/explore/${item.id}`,
       meta: `${sourceLabel("catalog")} · ${resolveContentMeta(item.type, item.creator)}`,
+      coverUrl: item.cover,
     });
   }
 

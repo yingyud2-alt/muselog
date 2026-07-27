@@ -1,6 +1,10 @@
 /**
- * Explore discovery feed — mock data shaped for a future API.
- * Do not wire external providers here yet.
+ * Explore discovery — editorial FALLBACK seed only.
+ *
+ * Books: Explore adapter builds sections from Open Library
+ * (`getTrendingBooks` / `getPopularBooks` / `getBooksByCategory`).
+ * Film / music: keep using this seed until TMDB / Spotify land.
+ * Do not treat hardcoded contentId values as the primary catalog.
  */
 
 export type DiscoveryCategory = "book" | "film" | "music";
@@ -17,15 +21,23 @@ export type ExploreDiscoveryItem = {
   id: string;
   title: string;
   creator: string;
+  /** Cover — remote URL preferred; gradient class only as last-resort fallback. */
   cover: string;
+  /**
+   * Preferred cover field for API-backed cards.
+   * When set, UI must use this over gradient placeholders.
+   */
+  coverUrl?: string;
   category: DiscoveryCategory;
   /** Origin channel — editorial mock until providers land */
   source: "editorial" | "community" | "catalog";
+  /** Provider source when API-backed (e.g. open_library). */
+  workSource?: string;
   /** Short insight / recommendation reason */
   reason: string;
   module: DiscoveryModule;
   voice?: CommunityVoice;
-  /** Optional link into existing CONTENT_CATALOG */
+  /** Optional link into public catalog / imported Work id */
   contentId?: string;
 };
 

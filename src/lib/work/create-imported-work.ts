@@ -1,4 +1,5 @@
-import type { Work, WorkType } from "@/types/work";
+import { normalizeExternalRatings } from "@/lib/work/work-adapters";
+import type { ExternalRating, Work, WorkType } from "@/types/work";
 
 /** MuseLog placeholder cover when an API omits artwork. */
 export const IMPORTED_WORK_PLACEHOLDER_COVER =
@@ -22,6 +23,8 @@ export type ImportedWorkInput = {
   genres?: string[];
   source: string;
   externalId: string;
+  /** Optional community ratings from the provider (not wired yet). */
+  externalRatings?: ExternalRating[];
   metadata?: Record<string, unknown>;
 };
 
@@ -29,11 +32,35 @@ export type ImportedWorkInput = {
  * Build a catalog Work from an external API hit.
  * Does not write user-media / memory / journal state.
  */
+function isUsableCoverUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  // Real remote / local asset — keep as Work.coverUrl.
+  if (
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("data:")
+  ) {
+    return true;
+  }
+  // Legacy MuseLog gradient class strings are also valid covers.
+  if (
+    trimmed.includes("from-") ||
+    trimmed.includes("via-") ||
+    trimmed.includes("to-")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function createImportedWork(input: ImportedWorkInput): Work {
-  const coverUrl =
-    typeof input.coverUrl === "string" && input.coverUrl.trim()
-      ? input.coverUrl.trim()
-      : IMPORTED_WORK_PLACEHOLDER_COVER;
+  const rawCover =
+    typeof input.coverUrl === "string" ? input.coverUrl.trim() : "";
+  const coverUrl = isUsableCoverUrl(rawCover)
+    ? rawCover
+    : IMPORTED_WORK_PLACEHOLDER_COVER;
 
   const description =
     typeof input.description === "string" && input.description.trim()
@@ -55,6 +82,7 @@ export function createImportedWork(input: ImportedWorkInput): Work {
     timeline: {},
     userNotes: "",
     moodTags: [],
+    externalRatings: normalizeExternalRatings(input.externalRatings),
     source: input.source,
     externalId: input.externalId,
     metadata: input.metadata,

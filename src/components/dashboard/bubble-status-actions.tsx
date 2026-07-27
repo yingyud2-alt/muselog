@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import {
   getBubbleActionLabels,
@@ -10,7 +9,13 @@ import {
 } from "@/components/dashboard/bubble-action-labels";
 import { MemoryStars } from "@/components/calendar/memory-stars";
 import type { WorkBubble } from "@/components/dashboard/mood-bubble-data";
+import {
+  findCatalogContentForBubble,
+  resolveBubbleMediaKey,
+} from "@/lib/content/bubble-content-bridge";
+import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import type { UserMediaState } from "@/lib/content/user-media-state";
+import type { ContentType } from "@/lib/content/types";
 import { cn } from "@/lib/utils";
 
 type BubbleStatusActionsProps = {
@@ -22,15 +27,36 @@ type BubbleStatusActionsProps = {
   className?: string;
 };
 
+function bubbleTypeToContentType(type: WorkBubble["type"]): ContentType {
+  const normalized = String(type).toUpperCase();
+  if (normalized === "MOVIE") return "MOVIE";
+  if (normalized === "MUSIC") return "MUSIC";
+  return "BOOK";
+}
+
+function openBubbleQuickLog(work: WorkBubble) {
+  const mediaKey = resolveBubbleMediaKey(work);
+  const contentType = bubbleTypeToContentType(work.type);
+  const catalog = findCatalogContentForBubble(work);
+  openJournalQuickLog(mediaKey, {
+    snapshot: {
+      title: work.title,
+      creator: work.creator,
+      type: contentType,
+      cover: catalog?.cover,
+      description: work.quote,
+    },
+  });
+}
+
 export function BubbleStatusActions({
   work,
   state,
-  onAddToJournal,
+  onAddToJournal: _onAddToJournal,
   onToggleWant,
   onOpenRating,
   className,
 }: BubbleStatusActionsProps) {
-  const router = useRouter();
   const labels = getBubbleActionLabels(work.type);
   const compactWant = getCompactWantLabel(work.type);
   const compactRate = getCompactRateLabel(work.type);
@@ -53,14 +79,14 @@ export function BubbleStatusActions({
         </p>
         <button
           type="button"
-          aria-label={labels.viewInJournal}
+          aria-label="Add to Journal"
           onClick={(event) => {
             stop(event);
-            router.push("/calendar");
+            openBubbleQuickLog(work);
           }}
           className="flex h-[48px] w-full items-center justify-center rounded-full border border-white/18 bg-white/[0.08] text-sm text-white/82 transition-colors hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25 md:h-auto md:py-2.5"
         >
-          {labels.viewInJournal}
+          Add to Journal
         </button>
       </div>
     );
@@ -74,7 +100,7 @@ export function BubbleStatusActions({
           aria-label={labels.continueInJournal}
           onClick={(event) => {
             stop(event);
-            router.push("/calendar");
+            openBubbleQuickLog(work);
           }}
           className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-2.5"
         >
@@ -109,7 +135,7 @@ export function BubbleStatusActions({
         aria-label={labels.addToJournal}
         onClick={(event) => {
           stop(event);
-          onAddToJournal();
+          openBubbleQuickLog(work);
         }}
         className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-white/95 text-sm font-medium text-black transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:h-auto md:py-2.5"
       >

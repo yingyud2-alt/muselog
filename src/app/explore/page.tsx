@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { AiCuratedSection } from "@/components/explore/ai-curated-section";
 import { CategoryExplorer } from "@/components/explore/category-explorer";
+import { ExploreReturnBridge } from "@/components/explore/explore-return-bridge";
 import { ExploreSearchHydrator } from "@/components/explore/explore-search-hydrator";
 import { SearchBar } from "@/components/explore/search-bar";
 import { MobileExplore } from "@/components/mobile/MobileExplore";
@@ -9,6 +10,8 @@ import { MobileExplore } from "@/components/mobile/MobileExplore";
 export default function ExplorePage() {
   return (
     <main className="min-h-[100svh] overflow-x-hidden bg-[#0D1117] text-white md:min-h-screen">
+      <ExploreReturnBridge />
+
       <div className="md:hidden">
         <MobileExplore />
       </div>

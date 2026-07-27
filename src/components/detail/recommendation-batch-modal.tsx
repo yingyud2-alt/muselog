@@ -9,8 +9,8 @@ import { WorkStatusActions } from "@/components/work-status-actions";
 import type { Recommendation } from "@/lib/ai/recommendation-engine";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import {
-  closeAllDetails,
   closeDetail,
+  openJournalQuickLog,
   openRecommendationDetail,
 } from "@/lib/detail/detail-overlay-store";
 import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
@@ -70,10 +70,18 @@ function BatchRow({ recommendation }: { recommendation: Recommendation }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => {
-                closeAllDetails();
-                router.push("/calendar");
-              }}
+              onClick={() =>
+                openJournalQuickLog(recommendation.id, {
+                  snapshot: {
+                    title: recommendation.title,
+                    creator: recommendation.creator,
+                    type: recommendation.type,
+                    cover: recommendation.cover,
+                    tags: recommendation.tags?.slice(0, 4),
+                    description: recommendation.reason,
+                  },
+                })
+              }
               className="rounded-full border border-white/10 px-3.5 py-1.5 text-[12px] text-white/55 hover:border-white/22"
             >
               + Journal

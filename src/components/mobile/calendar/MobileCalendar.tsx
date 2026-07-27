@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import { JournalAddPanel } from "@/components/calendar/journal-add-panel";
 import { CalendarMonthGrid } from "@/components/calendar/CalendarMonthGrid";
-import { MediaFloatingDetail } from "@/components/calendar/MediaFloatingDetail";
+import { JournalAddPanel } from "@/components/calendar/journal-add-panel";
 import { ReflectionEntryLink } from "@/components/reflection/reflection-entry-link";
 import { MonthSummary } from "@/components/calendar/MonthSummary";
 import { HabitStatCards } from "@/components/habit/HabitStatCards";
@@ -12,26 +11,71 @@ import {
   CALENDAR_DEFAULT_MONTH,
   CALENDAR_DEFAULT_YEAR,
 } from "@/lib/calendar/constants";
+import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
+import { moveJourneyToStartDate } from "@/lib/calendar/calendar-event-layout";
+import { upsertJournalEntry } from "@/lib/calendar/journal-store";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
 import { formatMonthYear } from "@/lib/calendar/utils";
+import {
+  mediaKeyFromJournalItemId,
+  mediaTypeToContentType,
+} from "@/lib/content/bubble-content-bridge";
+import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
-import { openWorkDetail } from "@/lib/detail/detail-overlay-store";
-import { workHrefForJournalItem } from "@/lib/work/work-route";
+import { MEDIA_EXPLORE_IDS, type MediaItem } from "@/types/media";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
+
+function resolveWorkIdForEntry(item: MediaItem): string {
+  if (MEDIA_EXPLORE_IDS[item.id]) return MEDIA_EXPLORE_IDS[item.id];
+  if (item.id.startsWith("journal-")) {
+    return mediaKeyFromJournalItemId(item.id);
+  }
+  if (item.id.startsWith("checkin-")) return "";
+  return item.id;
+}
+
+function openEntryQuickMemory(item: MediaItem) {
+  openJournalQuickLog(resolveWorkIdForEntry(item), {
+    entryId: item.id,
+    initialDate:
+      normalizeCalendarDate(item.startDate) ??
+      normalizeCalendarDate(item.date) ??
+      undefined,
+    snapshot: {
+      title: item.title,
+      creator: item.creator,
+      type: mediaTypeToContentType(item.type),
+      cover: item.cover,
+      tags: item.tags,
+    },
+  });
+}
 
 export function MobileCalendar() {
   const [addDate, setAddDate] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<ReturnType<typeof useCalendarMedia>["items"][0] | null>(null);
   const { items } = useCalendarMedia();
+  const itemsById = useMemo(
+    () => new Map(items.map((item) => [item.id, item])),
+    [items],
+  );
 
-  const monthLabel = formatMonthYear(CALENDAR_DEFAULT_YEAR, CALENDAR_DEFAULT_MONTH);
+  const monthLabel = formatMonthYear(
+    CALENDAR_DEFAULT_YEAR,
+    CALENDAR_DEFAULT_MONTH,
+  );
   const today = getDisplayTodayString();
 
-  /** Empty day/cell space opens Add Memory; cover/card clicks open work detail modal. */
-  const handleSelectDate = (date: string) => {
-    setSelectedItem(null);
-    setAddDate(date);
-  };
+  const handleMoveCover = useCallback(
+    (itemId: string, date: string) => {
+      const item = itemsById.get(itemId);
+      const nextStart = normalizeCalendarDate(date);
+      if (!item || !nextStart) return;
+      const next = moveJourneyToStartDate(item, nextStart);
+      if (next === item) return;
+      upsertJournalEntry(next);
+    },
+    [itemsById],
+  );
 
   return (
     <div>
@@ -57,16 +101,9 @@ export function MobileCalendar() {
           items={items}
           today={today}
           selectedDate={addDate}
-          onSelectDate={handleSelectDate}
-          onSelectItem={(item) => {
-            setAddDate(null);
-            const workHref = workHrefForJournalItem(item);
-            if (workHref) {
-              openWorkDetail(workHref.replace(/^\/work\//, ""));
-              return;
-            }
-            setSelectedItem(item);
-          }}
+          onSelectDate={setAddDate}
+          onOpenEntry={openEntryQuickMemory}
+          onMoveCover={handleMoveCover}
           variant="mobile"
         />
 
@@ -88,11 +125,6 @@ export function MobileCalendar() {
         date={addDate}
         journalItems={items}
         onClose={() => setAddDate(null)}
-      />
-
-      <MediaFloatingDetail
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
       />
     </div>
   );

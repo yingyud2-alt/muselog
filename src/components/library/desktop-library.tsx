@@ -12,6 +12,7 @@ import {
   LibraryFilters,
 } from "@/components/library/library-empty-state";
 import { LibraryShelf } from "@/components/library/library-shelf";
+import { RecentlyFinished } from "@/components/library/recently-finished";
 import { WaitingShelf } from "@/components/library/waiting-shelf";
 import { useReturnSnapshot } from "@/hooks/use-return-snapshot";
 import { useMuseRecommendations } from "@/lib/ai/use-muse-recommendations";
@@ -44,6 +45,14 @@ function formatArchiveStats(items: LibraryItem[]): string {
 
   if (parts.length === 0) return "Your archive is waiting to begin";
   return parts.join(" · ");
+}
+
+function sortRecentlyFinished(items: LibraryItem[]): LibraryItem[] {
+  return [...items].sort((a, b) => {
+    const aEnd = a.endDate ?? a.updatedAt;
+    const bEnd = b.endDate ?? b.updatedAt;
+    return bEnd.localeCompare(aEnd);
+  });
 }
 
 export function DesktopLibrary() {
@@ -97,38 +106,19 @@ export function DesktopLibrary() {
     [allItems],
   );
 
+  const recentlyFinished = useMemo(
+    () =>
+      sortRecentlyFinished(
+        allItems.filter((item) => item.status === "FINISHED"),
+      ).slice(0, 12),
+    [allItems],
+  );
+
   const waiting = useMemo(
     () =>
       sortLibraryItems(
         allItems.filter((item) => item.status === "WANT"),
         "recently-added",
-      ),
-    [allItems],
-  );
-
-  const books = useMemo(
-    () =>
-      sortLibraryItems(
-        allItems.filter((item) => item.type === "BOOK"),
-        "title",
-      ),
-    [allItems],
-  );
-
-  const movies = useMemo(
-    () =>
-      sortLibraryItems(
-        allItems.filter((item) => item.type === "MOVIE"),
-        "title",
-      ),
-    [allItems],
-  );
-
-  const music = useMemo(
-    () =>
-      sortLibraryItems(
-        allItems.filter((item) => item.type === "MUSIC"),
-        "title",
       ),
     [allItems],
   );
@@ -225,22 +215,20 @@ export function DesktopLibrary() {
               variant="collectible"
               showReason
               getReason={getLibraryItemReason}
+              showQuickActions
             />
           )}
         </section>
       ) : (
         <>
-          <LibraryShelf
-            title="Recently Added"
-            description="New covers settling into your archive"
-            items={recentlyAdded}
+          <CurrentlyExploring items={exploring} onSelect={openWork} />
+
+          <RecentlyFinished
+            items={recentlyFinished}
             onSelect={openWork}
-            cardWidth="lg"
-            variant="recent"
-            emptyMessage="Add or import titles to start your archive."
           />
 
-          <CurrentlyExploring items={exploring} onSelect={openWork} />
+          <LibraryCollections items={allItems} onSelect={openWork} />
 
           <LibraryAiCurated
             recommendations={recommendations}
@@ -249,11 +237,15 @@ export function DesktopLibrary() {
 
           <WaitingShelf items={waiting} onSelect={openWork} />
 
-          <LibraryCollections
-            books={books}
-            movies={movies}
-            music={music}
+          <LibraryShelf
+            title="Recently Added"
+            description="New covers settling into your archive"
+            items={recentlyAdded}
             onSelect={openWork}
+            cardWidth="lg"
+            variant="recent"
+            emptyMessage="Add or import titles to start your archive."
+            showQuickActions
           />
         </>
       )}

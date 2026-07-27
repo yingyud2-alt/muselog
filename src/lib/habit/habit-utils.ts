@@ -1,13 +1,15 @@
+import { formatCalendarDate } from "@/lib/calendar/calendar-date";
 import { DISPLAY_REFERENCE_DATE } from "@/lib/display-date";
 import { hasMuseActivity } from "@/lib/habit/habit-mock";
 import type { HabitLog } from "@/types/habit";
 
+/** MuseLog "today" as YYYY-MM-DD (display reference — no local timezone shift). */
 export function getDisplayTodayString(): string {
-  const year = DISPLAY_REFERENCE_DATE.getUTCFullYear();
-  const month = String(DISPLAY_REFERENCE_DATE.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(DISPLAY_REFERENCE_DATE.getUTCDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return formatCalendarDate(
+    DISPLAY_REFERENCE_DATE.getUTCFullYear(),
+    DISPLAY_REFERENCE_DATE.getUTCMonth() + 1,
+    DISPLAY_REFERENCE_DATE.getUTCDate(),
+  );
 }
 
 export type MonthHabitStats = {

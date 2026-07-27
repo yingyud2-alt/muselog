@@ -78,7 +78,7 @@ export function ReflectionPage() {
         <div className="space-y-6 md:space-y-7">
           <header
             className={cn(
-              "rounded-[28px] border border-white/[0.08] bg-white/[0.03]",
+              "rounded-[28px] muse-dark-panel bg-white/[0.03]",
               "p-6 shadow-[0_16px_48px_rgba(0,0,0,0.22)] backdrop-blur-xl md:p-8",
             )}
           >
@@ -97,7 +97,7 @@ export function ReflectionPage() {
           </header>
 
           {keywords.length > 0 ? (
-            <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] px-5 py-6 md:px-7">
+            <section className="rounded-[24px] muse-dark-panel bg-white/[0.03] px-5 py-6 md:px-7">
               <p className="font-label text-[10px] uppercase tracking-[0.16em] text-white/32">
                 Seasonal keywords
               </p>
@@ -109,7 +109,7 @@ export function ReflectionPage() {
             </section>
           ) : null}
 
-          <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] px-5 py-6 md:px-7">
+          <section className="rounded-[24px] muse-dark-panel bg-white/[0.03] px-5 py-6 md:px-7">
             <p className="font-label text-[10px] uppercase tracking-[0.16em] text-white/32">
               This month in numbers
             </p>
@@ -143,7 +143,7 @@ export function ReflectionPage() {
           />
 
           {recentInsights.length > 0 ? (
-            <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] px-5 py-6 md:px-7">
+            <section className="rounded-[24px] muse-dark-panel bg-white/[0.03] px-5 py-6 md:px-7">
               <p className="font-label text-[10px] uppercase tracking-[0.16em] text-white/32">
                 Recent notes
               </p>

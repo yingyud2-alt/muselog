@@ -1,5 +1,14 @@
 import type { Content } from "./types";
 
+/**
+ * FALLBACK / seed catalog only — not the primary public content source.
+ *
+ * Prefer API-imported Works (Open Library, future TMDB/Spotify) via
+ * `imported-work-catalog` whenever identity matches.
+ * Keep this file until Explore discovery is fully API-driven.
+ *
+ * @see src/lib/work/content-layers.ts
+ */
 export const CONTENT_CATALOG: Content[] = [
   {
     id: "book-norwegian-wood",

@@ -14,7 +14,7 @@ type ReflectionMoodProps = {
 
 export function ReflectionMood({ tags }: ReflectionMoodProps) {
   return (
-    <section className="rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
+    <section className="muse-dark-panel rounded-[24px] bg-white/[0.03] p-5 backdrop-blur-sm md:p-6">
       <h2 className="text-sm font-medium text-white/62">Your Mood</h2>
 
       {tags.length === 0 ? (

@@ -1,8 +1,17 @@
 export {
   bookService,
+  buildOpenLibraryCoverUrl,
+  enrichOpenLibraryWorkDescription,
+  enrichOpenLibraryWorks,
+  fetchOpenLibrarySearch,
+  getBooksByCategory,
+  getExploreBootstrapBooks,
   getOpenLibraryApiUrl,
+  getPopularBooks,
+  getTrendingBooks,
   mapOpenLibraryDocToWork,
   OPEN_LIBRARY_SOURCE,
+  OpenLibraryFetchError,
   searchBooks,
   type OpenLibrarySearchDoc,
 } from "@/services/api/book-service";

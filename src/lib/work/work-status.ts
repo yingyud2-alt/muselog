@@ -29,10 +29,9 @@ export type SetWorkStatusInput = {
 };
 
 const DROP_REASONS = [
-  "Not for me",
-  "Lost interest",
-  "Wrong timing",
-  "Too demanding",
+  "Not interested",
+  "Too difficult",
+  "Not my mood",
   "Other",
 ] as const;
 
@@ -104,7 +103,9 @@ export function setWorkStatus(
   input: SetWorkStatusInput,
 ): UserMediaState {
   const mediaType = toMediaType(identity.type);
-  const cover = identity.coverUrl ?? identity.cover ?? "";
+  // Avoid persisting "" which would block later Open Library cover fallbacks.
+  const rawCover = (identity.coverUrl ?? identity.cover ?? "").trim();
+  const cover = rawCover || undefined;
   const endDate =
     input.endDate ??
     (input.status === "finished" ? getDisplayTodayString() : undefined);
@@ -138,13 +139,15 @@ export function setWorkStatus(
   }
 
   if (input.status === "dropped") {
+    const reason = input.droppedReason?.trim() || undefined;
     const state = upsertUserMediaState(identity.id, {
       status: "DROPPED",
       title: identity.title,
       creator: identity.creator,
       cover,
       mediaType,
-      notes: input.droppedReason,
+      droppedReason: reason,
+      notes: reason,
       shortReview: input.review,
       endDate: endDate ?? getDisplayTodayString(),
       addedToJournal: false,
@@ -152,7 +155,7 @@ export function setWorkStatus(
     upsertMemory({
       contentId: identity.id,
       status: "DROPPED",
-      note: input.droppedReason ?? input.review,
+      note: reason ?? input.review,
       rating: input.rating,
     });
     return state;

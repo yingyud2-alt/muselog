@@ -13,7 +13,6 @@ import { X } from "lucide-react";
 import { openBubblePreview } from "@/lib/work/open-bubble-preview";
 import { getWorkBubblesForContainer, type WorkBubble } from "./mood-bubble-data";
 import { MobileFeaturedBubbleContent } from "./mobile-bubble-content";
-import { BubbleAiMoodLabel } from "./bubble-ai-mood-label";
 import { BubbleMemoryIndicator } from "./bubble-memory-indicator";
 import {
   clampMobileBubbleCenter,
@@ -679,7 +678,7 @@ export function MobileBubbleExperience() {
 
   return (
     <>
-      <div className="relative mt-9 flex h-[clamp(360px,52svh,460px)] w-full shrink-0 items-stretch justify-center px-0 mb-8 md:hidden">
+      <div className="relative flex h-[clamp(360px,52svh,460px)] w-full shrink-0 items-stretch justify-center px-0 pt-[max(env(safe-area-inset-top),8px)] md:hidden">
         <div
           ref={canvasRef}
           className="relative h-full w-full max-w-full overflow-hidden"
@@ -696,8 +695,6 @@ export function MobileBubbleExperience() {
             className="pointer-events-none absolute inset-0"
             style={{ background: MOONLIGHT_GRADIENT }}
           />
-
-          <BubbleAiMoodLabel className="font-display pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-[10px] font-bold tracking-wide text-white/40 backdrop-blur-md" />
 
           {layout.map((bubble, index) => {
             const isActive = focusedIndex === index;

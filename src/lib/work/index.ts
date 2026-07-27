@@ -1,6 +1,9 @@
 export type {
+  ExternalRating,
   Work,
   WorkAiInsights,
+  WorkEnrichment,
+  WorkEnrichmentSimilarWork,
   WorkTimeline,
   WorkType,
   WorkUserState,
@@ -12,8 +15,11 @@ export {
   contentToWork,
   libraryItemToWork,
   mediaItemToWork,
+  mergeExternalRatings,
   mergeWorks,
+  normalizeExternalRatings,
   toContentType,
+  toExternalRating,
   toLibraryMediaType,
   toMediaStatus,
   toMediaType,
@@ -38,6 +44,7 @@ export {
   buildWorkStatusAiSignals,
   clearWorkStatus,
   getDropReasons,
+  readingLabelForType,
   setWorkStatus,
   toWorkStatusAiSignal,
   toWorkUserStatus,
@@ -52,6 +59,18 @@ export {
 } from "@/lib/work/create-imported-work";
 
 export {
+  FALLBACK_COVER,
+  isRemoteCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
+
+export {
+  normalizeIdentityText,
+  workIdentityKey,
+} from "@/lib/work/work-identity";
+
+export {
+  findImportedWorkByIdentity,
   getImportedWorkByExternalId,
   getImportedWorkById,
   listImportedWorks,
@@ -59,3 +78,9 @@ export {
   removeImportedWork,
   useImportedWorkMap,
 } from "@/lib/work/imported-work-catalog";
+
+export {
+  CONTENT_LAYER,
+  isApiBackedSource,
+  type ContentLayer,
+} from "@/lib/work/content-layers";

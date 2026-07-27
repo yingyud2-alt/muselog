@@ -1,7 +1,5 @@
 "use client";
 
-import { getDetailOverlaySnapshot } from "@/lib/detail/detail-overlay-store";
-
 export type LibraryUiSnapshot = {
   query: string;
   typeFilter: string;
@@ -35,8 +33,10 @@ const RESTORE_EVENT = "muselog-restore-return-context";
 const MAX_AGE_MS = 1000 * 60 * 60; // 1 hour
 
 type SnapshotProvider = () => ReturnPageState | null | undefined;
+type OverlayScrollReader = () => number | null;
 
 let snapshotProvider: SnapshotProvider | null = null;
+let overlayScrollReader: OverlayScrollReader | null = null;
 
 /** Pages register a live UI snapshot captured right before leaving for /work. */
 export function registerReturnSnapshotProvider(provider: SnapshotProvider) {
@@ -44,6 +44,16 @@ export function registerReturnSnapshotProvider(provider: SnapshotProvider) {
   return () => {
     if (snapshotProvider === provider) {
       snapshotProvider = null;
+    }
+  };
+}
+
+/** Detail overlay registers its pre-lock scrollY so return context stays accurate. */
+export function registerOverlayScrollReader(reader: OverlayScrollReader) {
+  overlayScrollReader = reader;
+  return () => {
+    if (overlayScrollReader === reader) {
+      overlayScrollReader = null;
     }
   };
 }
@@ -96,11 +106,7 @@ export function saveReturnContext(pathnameOverride?: string) {
 }
 
 function readOverlaySavedScrollY(): number | null {
-  const overlay = getDetailOverlaySnapshot();
-  if (overlay.stack.length > 0 && overlay.savedScrollY != null) {
-    return overlay.savedScrollY;
-  }
-  return null;
+  return overlayScrollReader?.() ?? null;
 }
 
 export function peekReturnContext(): ReturnContext | null {

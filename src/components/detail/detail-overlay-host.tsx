@@ -1,6 +1,8 @@
 "use client";
 
 import { RecommendationBatchModal } from "@/components/detail/recommendation-batch-modal";
+import { JournalQuickLogModal } from "@/components/journal/journal-quick-log-modal";
+import { WorkDetailModal } from "@/components/work-detail-modal";
 import { WorkPreviewModal } from "@/components/work-preview-modal";
 import { useDetailOverlay } from "@/hooks/use-detail-overlay";
 import { closeDetail } from "@/lib/detail/detail-overlay-store";
@@ -8,8 +10,9 @@ import { closeDetail } from "@/lib/detail/detail-overlay-store";
 const BASE_Z = 70;
 
 /**
- * Global host for lightweight preview overlays.
- * Full archive lives at /work/[id] via View Details.
+ * Global host for in-place work overlays.
+ * Explore / Library use WorkDetailModal; bubbles may use WorkPreviewModal.
+ * Scroll position is restored by the overlay store on close.
  */
 export function DetailOverlayHost() {
   const { stack } = useDetailOverlay();
@@ -20,6 +23,19 @@ export function DetailOverlayHost() {
     <>
       {stack.map((layer, index) => {
         const zIndex = BASE_Z + index * 4;
+
+        if (layer.type === "detail") {
+          return (
+            <WorkDetailModal
+              key={`detail-${layer.workId}-${index}`}
+              workId={layer.workId}
+              snapshot={layer.snapshot}
+              onClose={closeDetail}
+              lockScroll={false}
+              zIndex={zIndex}
+            />
+          );
+        }
 
         if (layer.type === "preview") {
           return (
@@ -32,6 +48,21 @@ export function DetailOverlayHost() {
               lockScroll={false}
               zIndex={zIndex}
               showExploreMore={Boolean(layer.recommendation)}
+            />
+          );
+        }
+
+        if (layer.type === "journal-quick-log") {
+          return (
+            <JournalQuickLogModal
+              key={`journal-${layer.workId || "new"}-${layer.entryId ?? ""}-${layer.initialDate ?? ""}-${index}`}
+              workId={layer.workId}
+              snapshot={layer.snapshot}
+              initialDate={layer.initialDate}
+              entryId={layer.entryId}
+              onClose={closeDetail}
+              lockScroll={false}
+              zIndex={zIndex}
             />
           );
         }

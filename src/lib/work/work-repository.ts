@@ -3,28 +3,61 @@ import { CONTENT_CATALOG, getContentById } from "@/lib/content/content-data";
 import type { Memory } from "@/lib/content/types";
 import type { UserMediaState } from "@/lib/content/user-media-state";
 import { buildLibraryItems } from "@/lib/library/library-items";
+import { resolveCoverUrl, isRemoteCoverUrl } from "@/lib/work/cover-url";
+import {
+  getImportedWorkById,
+  listImportedWorks,
+} from "@/lib/work/imported-work-catalog";
 import {
   contentToWork,
   libraryItemToWork,
   mediaItemToWork,
   mergeWorks,
 } from "@/lib/work/work-adapters";
-import { getImportedWorkById, listImportedWorks } from "@/lib/work/imported-work-catalog";
+import {
+  workIdentityKey,
+  workTitleIdentityKey,
+} from "@/lib/work/work-identity";
 import { resolveWorkRouteId } from "@/lib/work/work-route";
 import type { MediaItem } from "@/types/media";
 import type { Work } from "@/types/work";
 
 /**
  * Local Work repository — single read model over existing stores.
- * Swap internals for services/api/* when remote APIs are wired.
+ *
+ * Public catalog priority: API imports > mock CONTENT_CATALOG fallback.
+ * User Library (status/rating/journal) stays in buildWorks from user stores.
  */
+
+/** Public discovery Works: API imports first; mock only fills missing titles. */
 export function listCatalogWorks(): Work[] {
-  const local = CONTENT_CATALOG.map((content) => contentToWork(content));
-  const imported = listImportedWorks();
-  const byId = new Map<string, Work>();
-  for (const work of local) byId.set(work.id, work);
-  for (const work of imported) byId.set(work.id, work);
-  return Array.from(byId.values());
+  const byTitle = new Map<string, Work>();
+
+  const preferApi = (candidate: Work, existing: Work | undefined): Work => {
+    if (!existing) return candidate;
+    const score = (work: Work) =>
+      (work.source === "open_library" ? 50 : 0) +
+      (isRemoteCoverUrl(work.coverUrl) ? 40 : 0) +
+      (work.description.trim() ? 10 : 0);
+    return score(candidate) >= score(existing) ? candidate : existing;
+  };
+
+  // 1. API imports — primary public catalog (title key collapses EN/JA authors)
+  for (const work of listImportedWorks()) {
+    const key = workTitleIdentityKey(work.title) || workIdentityKey(work.title, work.creator);
+    byTitle.set(key, preferApi(work, byTitle.get(key)));
+  }
+
+  // 2. Mock catalog — only when no API twin exists for that title
+  for (const content of CONTENT_CATALOG) {
+    const work = contentToWork(content);
+    const key = workTitleIdentityKey(work.title) || workIdentityKey(work.title, work.creator);
+    if (!byTitle.has(key)) {
+      byTitle.set(key, work);
+    }
+  }
+
+  return Array.from(byTitle.values());
 }
 
 export function buildWorks(
@@ -41,6 +74,8 @@ export function buildWorks(
 
     if (imported) {
       return mergeWorks(imported, {
+        // Keep user-library media key when it differs from API id
+        id: base.id,
         userStatus: base.userStatus,
         userState: base.userStatus,
         rating: base.rating,
@@ -49,6 +84,10 @@ export function buildWorks(
         timeline: base.timeline,
         userNotes: base.userNotes,
         description: base.description || imported.description,
+        coverUrl: resolveCoverUrl(imported.coverUrl, base.coverUrl),
+        source: imported.source,
+        externalId: imported.externalId,
+        metadata: imported.metadata,
       });
     }
 
@@ -87,10 +126,24 @@ export function getWorkById(
   if (owned) return owned;
 
   const imported = getImportedWorkById(resolved);
-  if (imported) return imported;
+  const catalogEntry =
+    getContentById(resolved) ?? getContentByMediaKey(resolved);
 
-  const catalog = getContentById(resolved) ?? getContentByMediaKey(resolved);
-  if (catalog) return contentToWork(catalog);
+  // API import wins entirely — never fall back to mock fields when present.
+  if (imported) {
+    if (!catalogEntry || imported.id === resolved) {
+      return imported;
+    }
+
+    // Request used a mock catalog id; keep that id for library key continuity
+    // while serving Open Library cover / description / metadata / ratings.
+    return {
+      ...imported,
+      id: resolved,
+    };
+  }
+
+  if (catalogEntry) return contentToWork(catalogEntry);
 
   const journal = journalEntries.find((entry) => {
     const key = entry.id.replace(/^journal-/, "");

@@ -21,9 +21,10 @@ import { getContentById } from "@/lib/content/content-data";
 import {
   closeAllDetails,
   closeDetail,
+  openJournalQuickLog,
   openRecommendationBatch,
-  openWorkDetail,
 } from "@/lib/detail/detail-overlay-store";
+import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
 import { cn } from "@/lib/utils";
 
 type RecommendationDetailModalProps = {
@@ -168,20 +169,28 @@ function RecommendationBody({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => {
-                closeAllDetails();
-                router.push("/calendar");
-              }}
+              onClick={() =>
+                openJournalQuickLog(recommendation.id, {
+                  snapshot: {
+                    title: recommendation.title,
+                    creator: recommendation.creator,
+                    type: recommendation.type,
+                    cover: recommendation.cover,
+                    tags: recommendation.tags?.slice(0, 4),
+                    description: recommendation.reason,
+                  },
+                })
+              }
               className="rounded-full border border-white/14 px-5 py-2.5 text-sm text-white/72"
             >
               + Add to Journal
             </button>
             <button
               type="button"
-              onClick={() => openWorkDetail(recommendation.id)}
+              onClick={() => navigateToWorkDetail(router, recommendation.id)}
               className="rounded-full border border-white/10 px-4 py-2.5 text-sm text-white/48 transition-colors hover:text-white/70"
             >
-              View Details
+              View Details →
             </button>
           </div>
         </div>

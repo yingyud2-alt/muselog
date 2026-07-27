@@ -5,46 +5,68 @@ import {
   MOBILE_JOURNAL_OVERLAY,
   type JourneySegment,
 } from "@/lib/calendar/journey-overlay-utils";
-import type { MediaItem } from "@/types/media";
+import { getJourneyColor } from "@/lib/calendar/journey-utils";
+import { JOURNEY_COLOR_SWATCHES } from "@/types/media";
 import { cn } from "@/lib/utils";
-
-import { MediaJourneySegment } from "./media-journey-segment";
 
 type MediaJourneyOverlayProps = {
   segments: JourneySegment[];
-  onSelect: (item: MediaItem, trigger: HTMLElement) => void;
   variant?: "desktop" | "mobile";
-  dateZoneHeight: number;
+  /** Extra height when multiple period lines stack. */
+  linePad?: number;
 };
 
+/**
+ * Period lines only — covers live in day cells.
+ * Not draggable; not event blocks.
+ */
 export function MediaJourneyOverlay({
   segments,
-  onSelect,
   variant = "desktop",
+  linePad = 0,
 }: MediaJourneyOverlayProps) {
   if (segments.length === 0) return null;
 
   const isMobile = variant === "mobile";
   const config = isMobile ? MOBILE_JOURNAL_OVERLAY : DESKTOP_JOURNAL_OVERLAY;
+  const zoneHeight = Math.max(config.lineZoneHeight, linePad);
 
   return (
     <div
       className={cn(
-        // Full cell height, above day cells — covers capture clicks; empty space passes through
-        "pointer-events-none absolute inset-0 z-30 grid grid-cols-7 items-end pb-0.5",
-        isMobile ? "gap-1" : "gap-1.5 md:gap-3",
+        "pointer-events-none absolute inset-x-0 bottom-0 z-20 grid grid-cols-7",
+        isMobile ? "gap-1" : "gap-1 md:gap-1.5",
       )}
+      style={{ height: zoneHeight }}
+      aria-hidden="true"
     >
-      {segments.map((segment) => (
-        <MediaJourneySegment
-          key={`${segment.item.id}-${segment.weekIndex}-${segment.startCol}`}
-          segment={segment}
-          onSelect={onSelect}
-          laneStep={config.laneStep}
-          trackHeight={config.trackHeight}
-          variant={variant}
-        />
-      ))}
+      {segments.map((segment) => {
+        const span = segment.endCol - segment.startCol + 1;
+        const swatch = JOURNEY_COLOR_SWATCHES[getJourneyColor(segment.item)];
+
+        return (
+          <div
+            key={`${segment.item.id}-${segment.weekIndex}-${segment.startCol}`}
+            style={{
+              gridColumn: `${segment.startCol + 1} / span ${span}`,
+              paddingBottom: 2 + segment.lane * config.laneStep,
+            }}
+            className="flex min-w-0 items-end"
+          >
+            <div
+              className={cn(
+                "h-[2px] w-full rounded-full",
+                segment.isRangeStart && "rounded-l-full",
+                segment.isRangeEnd && "rounded-r-full",
+              )}
+              style={{
+                backgroundColor: `${swatch}aa`,
+                boxShadow: `0 0 0 1px ${swatch}18`,
+              }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

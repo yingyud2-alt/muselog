@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { CalendarDayCell } from "@/components/calendar/calendar-day-cell";
 import { MediaJourneyOverlay } from "@/components/calendar/media-journey-overlay";
@@ -9,7 +9,7 @@ import {
   DESKTOP_JOURNAL_OVERLAY,
   MOBILE_JOURNAL_OVERLAY,
 } from "@/lib/calendar/journey-overlay-utils";
-import { dateHasJournalMedia } from "@/lib/calendar/journey-utils";
+import { getJourneyStart } from "@/lib/calendar/journey-utils";
 import {
   buildMonthGrid,
   getWeekdayLabels,
@@ -24,12 +24,14 @@ type CalendarMonthGridProps = {
   today?: string;
   selectedDate?: string | null;
   onSelectDate: (date: string) => void;
-  onSelectItem: (item: MediaItem, trigger: HTMLElement) => void;
+  onOpenEntry: (item: MediaItem) => void;
+  onMoveCover: (itemId: string, date: string) => void;
   variant?: "desktop" | "mobile";
   className?: string;
 };
 
-const BASE_ROW_HEIGHT = { desktop: 72, mobile: 64 } as const;
+/** Fixed row height — compact Apple-month + journal density. */
+const CELL_HEIGHT = { desktop: 68, mobile: 56 } as const;
 
 export function CalendarMonthGrid({
   year,
@@ -38,7 +40,8 @@ export function CalendarMonthGrid({
   today,
   selectedDate,
   onSelectDate,
-  onSelectItem,
+  onOpenEntry,
+  onMoveCover,
   variant = "desktop",
   className,
 }: CalendarMonthGridProps) {
@@ -49,21 +52,36 @@ export function CalendarMonthGrid({
     [items, weeks],
   );
   const isMobile = variant === "mobile";
-  const overlayConfig = isMobile ? MOBILE_JOURNAL_OVERLAY : DESKTOP_JOURNAL_OVERLAY;
+  const overlayConfig = isMobile
+    ? MOBILE_JOURNAL_OVERLAY
+    : DESKTOP_JOURNAL_OVERLAY;
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  const startsByDate = useMemo(() => {
+    const map = new Map<string, MediaItem[]>();
+    for (const item of items) {
+      const start = getJourneyStart(item);
+      if (!start) continue;
+      const list = map.get(start) ?? [];
+      list.push(item);
+      map.set(start, list);
+    }
+    return map;
+  }, [items]);
 
   return (
     <div
       className={cn(
         isMobile
-          ? "rounded-[24px] border border-white/[0.08] bg-white/[0.03] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.2)] backdrop-blur-md"
-          : "rounded-[28px] border border-white/[0.1] bg-white/[0.035] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-md md:rounded-[32px] md:p-5",
+          ? "rounded-[20px] border border-white/[0.08] bg-white/[0.03] p-2.5"
+          : "rounded-[22px] border border-white/[0.1] bg-white/[0.035] p-3 md:rounded-[24px] md:p-4",
         className,
       )}
     >
       <div
         className={cn(
-          "mb-3 grid shrink-0 grid-cols-7 px-0.5",
-          isMobile ? "mb-2 gap-1" : "mb-4 gap-1.5 md:gap-3",
+          "mb-2 grid shrink-0 grid-cols-7 px-0.5",
+          isMobile ? "mb-1.5 gap-1" : "mb-2 gap-1 md:gap-1.5",
         )}
       >
         {weekdayLabels.map((label) => (
@@ -72,8 +90,8 @@ export function CalendarMonthGrid({
             className={cn(
               "text-center uppercase text-white/40",
               isMobile
-                ? "text-[9px] font-medium tracking-[0.14em]"
-                : "text-[9px] tracking-[0.16em] md:text-[10px] md:tracking-[0.18em]",
+                ? "text-[8px] font-medium tracking-[0.12em]"
+                : "text-[9px] tracking-[0.14em]",
             )}
           >
             {label.slice(0, 3)}
@@ -81,27 +99,33 @@ export function CalendarMonthGrid({
         ))}
       </div>
 
-      <div className={cn(isMobile ? "space-y-1" : "flex flex-col gap-1.5 md:gap-3")}>
+      <div
+        role="grid"
+        aria-label="Journal calendar"
+        className={cn(isMobile ? "space-y-1" : "flex flex-col gap-1 md:gap-1.5")}
+      >
         {weeks.map((week, weekIndex) => {
           const segments = segmentsByWeek.get(weekIndex) ?? [];
           const weekLanes =
             segments.length > 0
               ? Math.max(...segments.map((segment) => segment.lane)) + 1
               : 0;
-          const weekOverlayPadding = weekLanes * overlayConfig.laneStep;
-          const rowMinHeight =
-            BASE_ROW_HEIGHT[variant] +
-            overlayConfig.dateZoneHeight +
-            weekOverlayPadding;
+          const linePad =
+            weekLanes > 0
+              ? overlayConfig.lineZoneHeight +
+                (weekLanes - 1) * overlayConfig.laneStep
+              : 0;
+          const rowHeight = CELL_HEIGHT[variant] + linePad;
 
           return (
             <div
               key={`week-${weekIndex}`}
+              role="row"
               className={cn(
                 "relative grid grid-cols-7",
-                isMobile ? "gap-1" : "gap-1.5 md:gap-3",
+                isMobile ? "gap-1" : "gap-1 md:gap-1.5",
               )}
-              style={{ minHeight: rowMinHeight }}
+              style={{ height: rowHeight }}
             >
               {week.days.map((cell, cellIndex) => {
                 if (!cell.date || !cell.day) {
@@ -109,8 +133,10 @@ export function CalendarMonthGrid({
                     <div
                       key={`${weekIndex}-${cellIndex}`}
                       className={cn(
-                        "rounded-[14px] border border-white/[0.04] bg-white/[0.015]",
-                        !isMobile && "md:min-h-[72px] md:rounded-[20px]",
+                        "rounded-[10px] border border-white/[0.04] bg-white/[0.015]",
+                        isMobile
+                          ? "h-[56px]"
+                          : "h-[64px] md:h-[68px] md:rounded-[12px]",
                       )}
                       aria-hidden="true"
                     />
@@ -125,8 +151,12 @@ export function CalendarMonthGrid({
                     isCurrentMonth={cell.isCurrentMonth}
                     isToday={today === cell.date}
                     isSelected={selectedDate === cell.date}
-                    hasEntries={dateHasJournalMedia(cell.date, items)}
+                    startEntries={startsByDate.get(cell.date) ?? []}
+                    isDropTarget={dragOverDate === cell.date}
                     onSelectDate={onSelectDate}
+                    onOpenEntry={onOpenEntry}
+                    onDropCover={onMoveCover}
+                    onDragHover={setDragOverDate}
                     variant={variant}
                   />
                 );
@@ -134,9 +164,8 @@ export function CalendarMonthGrid({
 
               <MediaJourneyOverlay
                 segments={segments}
-                onSelect={onSelectItem}
                 variant={variant}
-                dateZoneHeight={overlayConfig.dateZoneHeight}
+                linePad={linePad}
               />
             </div>
           );

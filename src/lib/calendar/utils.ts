@@ -121,9 +121,10 @@ export function groupMediaByDate<T extends { date: string }>(
   const map = new Map<string, T[]>();
 
   for (const item of items) {
-    const existing = map.get(item.date) ?? [];
+    const key = item.date;
+    const existing = map.get(key) ?? [];
     existing.push(item);
-    map.set(item.date, existing);
+    map.set(key, existing);
   }
 
   return map;

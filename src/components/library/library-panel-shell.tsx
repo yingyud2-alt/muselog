@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
+import { DARK_FLOATING_PANEL_CLASS } from "@/lib/ui/dark-panel";
 import { cn } from "@/lib/utils";
 
 type LibraryPanelShellProps = {
@@ -79,7 +80,8 @@ export function LibraryPanelShell({
             exit={{ opacity: 0, y: 16 }}
             className={cn(
               "fixed overflow-y-auto text-white",
-              "border border-white/[0.08] bg-[rgba(15,20,28,0.85)] backdrop-blur-xl",
+              DARK_FLOATING_PANEL_CLASS,
+              "bg-[rgba(15,20,28,0.85)] backdrop-blur-xl",
               "inset-x-0 bottom-0 max-h-[90svh] rounded-t-[24px] p-5 md:hidden",
             )}
             style={{ paddingBottom: MOBILE_NAV_CLEARANCE, zIndex: zIndex + 1 }}
@@ -106,7 +108,8 @@ export function LibraryPanelShell({
             className={cn(
               "fixed left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2",
               "max-h-[min(86vh,720px)] overflow-y-auto rounded-[22px]",
-              "border border-white/[0.08] bg-[rgba(15,20,28,0.85)] p-7 backdrop-blur-xl md:block",
+              DARK_FLOATING_PANEL_CLASS,
+              "bg-[rgba(15,20,28,0.85)] p-7 backdrop-blur-xl md:block",
               wide ? "w-[min(92vw,860px)]" : "w-[min(92vw,520px)]",
             )}
             style={{ zIndex: zIndex + 1 }}

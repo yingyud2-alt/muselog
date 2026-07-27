@@ -115,8 +115,8 @@ function DesktopModal({
       transition={{ type: "spring", damping: 28, stiffness: 340, mass: 0.9 }}
       className={cn(
         "pointer-events-auto hidden w-[min(860px,92vw)] max-h-[80vh] overflow-hidden md:flex",
-        "rounded-[24px] border border-white/12 bg-[#10161D]/92",
-        "shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.55),0_0_60px_rgba(45,212,191,0.06)]",
+        "muse-dark-panel rounded-[24px] bg-[#10161D]/92",
+        "shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_60px_rgba(45,212,191,0.06)]",
         "backdrop-blur-2xl",
       )}
     >
@@ -184,7 +184,7 @@ function MobileSheet({
       }}
       className={cn(
         "pointer-events-auto fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col md:hidden",
-        "rounded-t-[24px] border border-white/12 border-b-0 bg-[#10161D]/95",
+        "muse-dark-panel rounded-t-[24px] border-b-0 bg-[#10161D]/95",
         "shadow-[0_-12px_60px_rgba(0,0,0,0.45),0_0_40px_rgba(45,212,191,0.05)]",
         "backdrop-blur-2xl",
       )}
