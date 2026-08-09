@@ -1,70 +1,124 @@
-# MuseLog
+# 忆屿 MuseLog
 
-## 忆屿 · Your emotional archipelago
+## Your emotional archipelago.
 
 > 岛屿由潮汐堆积，而我们由感受构成。
 
-MuseLog is an AI-powered emotional cultural archive that helps users collect, explore, and rediscover books, films, and music through personal emotions and memories.
+MuseLog（忆屿） is an AI-powered personal cultural archive that helps users collect, explore, and rediscover books, films, and music through emotions, memories, and personal experiences.
 
-Rather than simply recording what we consume, MuseLog explores a deeper question:
+Unlike traditional media tracking platforms that focus on ratings and lists, MuseLog focuses on the emotional connection between users and cultural works.
 
-**Why do certain works resonate with us?**
-
-MuseLog transforms fragmented cultural experiences into a personal emotional landscape — an archive of moments, feelings, and memories.
+It transforms scattered cultural experiences into a personal emotional landscape.
 
 ---
 
 # ✨ Overview
 
-In an era of endless information and content overload, people save more than they truly remember.
+In an era of information overload, people consume more cultural content than ever, but remember less.
 
-MuseLog proposes a different way of interacting with culture:
+MuseLog explores a different way of interacting with culture:
 
 **From collecting content → to preserving emotions.**
 
 Users can:
 
-- Discover books, films, and music based on their current mood
+- Discover books, films, and music based on their current emotions
 - Build a personal cultural archive
-- Track their experiences through time
-- Record reflections and emotional memories
+- Track cultural experiences through time
+- Record reflections and memories
 - Rediscover meaningful works through AI-powered recommendations
+
+The core question behind MuseLog is:
+
+> "What moved me, and why?"
 
 ---
 
-# 🌊 Core Features
+# 🌊 Product Philosophy
 
-## Emotional Bubble Discovery
+MuseLog is designed around the idea that cultural experiences are not only information, but also personal memories.
 
-MuseLog's homepage presents cultural recommendations as an interactive emotional landscape.
+A movie watched during a certain period of life, a song repeatedly played during a journey, or a book that changed one's perspective — these moments form an individual's emotional landscape.
 
-Each floating bubble represents a cultural work selected according to the user's emotional state.
+MuseLog aims to build a digital archive that remembers not only:
 
-The recommendation flow:
+"What did you consume?"
 
-User Emotion
-↓
-Mood Understanding
-↓
-Recommendation Engine
-↓
-Cultural Database
-↓
-Personalized Discovery
+but also:
+
+"Who were you when you experienced it?"
+
+---
+
+# ✨ Core Features
+
+## 🌌 Emotional Bubble Discovery
+
+MuseLog's homepage transforms cultural discovery into an interactive emotional landscape.
+
+Books, films, and music are represented as floating emotional bubbles, allowing users to explore content through mood and atmosphere.
 
 Features:
 
-- Mood-driven recommendation
-- Dynamic bubble interaction
+- Mood-driven discovery
+- Interactive bubble interface
 - Emotional metadata mapping
-- Personalized cultural exploration
+- Personalized recommendations
 
+Recommendation flow:
+
+```
+User Emotion
+
+      ↓
+
+Mood Understanding
+
+      ↓
+
+Recommendation Engine
+
+      ↓
+
+Cultural Content Database
+
+      ↓
+
+Personalized Discovery
+```
+
+---
+
+## 🤖 AI Recommendation System
+
+MuseLog introduces an emotion-oriented recommendation approach.
+
+Instead of only recommending through categories or popularity, MuseLog considers:
+
+- Emotional context
+- Content themes
+- Keywords
+- Cultural metadata
+- User interaction history
+
+Current system includes:
+
+- Mood taxonomy
+- Weighted recommendation algorithm
+- Emotional keyword matching
+- Content enrichment pipeline
+
+Future directions:
+
+- LLM-based semantic recommendation
+- Personalized emotional profile modeling
+- Long-term cultural memory analysis
 
 ---
 
 ## 📚 Unified Cultural Library
 
-MuseLog provides a unified space for different cultural experiences:
+MuseLog provides a unified archive for different cultural experiences:
 
 - Books
 - Films
@@ -72,142 +126,137 @@ MuseLog provides a unified space for different cultural experiences:
 
 Users can:
 
-- Save favorite works
+- Save meaningful works
 - Track progress
 - Add personal notes
-- Build long-term cultural memories
+- Build long-term cultural collections
 
+Each work connects:
+
+- External metadata
+- Cover information
+- Personal records
+- Emotional memories
 
 ---
 
 ## 🗓 Memory Calendar
 
-MuseLog transforms cultural experiences into a visual timeline.
+MuseLog transforms cultural consumption into a visual timeline.
 
-Instead of only recording dates, it captures:
+Instead of simply recording dates, it captures:
 
-- What you experienced
+- What users experienced
 - When it happened
-- The emotions connected with that moment
+- The emotions connected with the moment
 
-The calendar becomes a personal map of cultural memories.
-
-
----
-
-## 🤖 AI Reflection Assistant
-
-MuseLog integrates AI to help users better understand their cultural experiences.
-
-It supports:
-
-- Reflection generation
-- Emotional keyword extraction
-- Work-related insights
-- Memory enrichment
-
-The goal is not to generate generic reviews, but to help users express their own feelings and build deeper connections with cultural works.
-
+The calendar becomes a personal cultural memory map.
 
 ---
 
-# 🧠 AI Recommendation System
+## ✍️ AI Reflection Assistant
 
-MuseLog combines structured emotional understanding with cultural metadata.
+MuseLog integrates AI capabilities to support personal reflection.
 
-## Mood Taxonomy
+It helps users:
 
-The system organizes emotional states into different dimensions:
+- Generate reflection prompts
+- Extract emotional keywords
+- Enrich personal records
+- Understand connections between works and memories
 
-- Nostalgic
-- Reflective
-- Calm
-- Curious
-- Romantic
-- Melancholic
-- Energetic
-- Inspirational
+The goal is not to generate generic AI reviews, but to help users express their own perspectives.
 
 ---
 
-## Recommendation Engine
+# 🧠 Product Architecture
 
-Works are evaluated through:
+```
+                    User Interaction
 
-- Mood relevance
-- Genre compatibility
-- Keywords
-- Cultural metadata
-- User interaction history
+                           ↓
 
-Future directions:
+                 Emotion & Mood Layer
 
-- LLM-based semantic recommendation
-- Personalized emotional profiles
-- Long-term cultural memory modeling
+                           ↓
 
+              Recommendation Engine
+
+                           ↓
+
+              Cultural Content Layer
+
+                           ↓
+
+              Personal Memory Archive
+```
 
 ---
 
-# 🎨 Design Philosophy
+# 🏗 Technical Implementation
 
-MuseLog is inspired by:
+## Frontend
+
+- Next.js 16
+- React
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+
+
+## AI & Recommendation
+
+- Mood classification system
+- Recommendation algorithm
+- Content enrichment pipeline
+- AI reflection framework
+
+
+## Data Integration
+
+MuseLog integrates multiple cultural data sources:
+
+- Book metadata APIs
+- Movie databases
+- Music platforms
+
+
+## Engineering Architecture
+
+Implemented:
+
+- Unified Work data model
+- API service layer
+- Content normalization
+- Canonical identity mapping
+- Responsive component system
+
+---
+
+# 🎨 Design System
+
+MuseLog follows a minimal and emotional visual language inspired by:
 
 - Apple Music
 - Notion
 - Kinfolk
 - Museum exhibitions
 
-The design focuses on:
+
+Design principles:
 
 - Quiet interaction
 - Emotional atmosphere
 - Human-centered experience
-- Editorial visual language
+- Editorial visual rhythm
+
 
 The interface combines:
 
 - Floating emotional bubbles
-- Dark immersive backgrounds
-- Editorial typography
-- Museum-like spatial rhythm
-
-The goal is to create a digital archive that feels less like a database and more like a personal exhibition.
-
-
----
-
-# 🏗 Tech Stack
-
-## Frontend
-
-- Next.js 16
-- TypeScript
-- React
-- Tailwind CSS
-- Framer Motion
-
-
-## AI & Data
-
-- Cultural content APIs
-- Recommendation algorithms
-- Mood classification system
-- AI enrichment pipeline
-
-
-## Architecture
-
-User Interaction
-    ↓
-Emotion & Mood Layer
-    ↓
-Recommendation Engine
-    ↓
-Cultural Content Database
-    ↓
-Personal Memory Archive
-
+- Dark immersive background
+- Minimal typography
+- Museum-like spatial experience
 
 ---
 
@@ -215,7 +264,7 @@ Personal Memory Archive
 
 ## Home
 
-Emotional discovery space
+Emotional discovery space:
 
 - Mood bubbles
 - AI recommendations
@@ -224,62 +273,98 @@ Emotional discovery space
 
 ## Explore
 
-Cultural discovery platform
+Cultural discovery platform:
 
 - Search
-- Work details
+- Content details
 - Metadata enrichment
 
 
 ## Library
 
-Personal cultural collection
+Personal cultural collection:
 
 - Saved works
 - Progress tracking
-- Personal records
+- Personal archive
 
 
 ## Journal
 
-Memory and reflection space
+Memory and reflection space:
 
 - Emotional notes
 - Cultural timeline
 - Personal experiences
 
+---
+
+# 🚀 Future Roadmap
+
+## v1.0
+
+Completed:
+
+✅ Emotional bubble homepage
+
+✅ AI recommendation framework
+
+✅ Book / Film / Music archive
+
+✅ Personal memory calendar
+
+✅ Chinese / English localization
+
+
+## Future Development
+
+### AI Cultural Companion
+
+Develop an AI assistant that understands:
+
+- User preferences
+- Emotional patterns
+- Cultural interests
+
+
+### Multimodal Recommendation
+
+Explore recommendations based on:
+
+- Text
+- Images
+- Listening history
+- Personal reflections
+
+
+### Personal Cultural Map
+
+Generate a visual representation of:
+
+- Cultural journey
+- Emotional evolution
+- Personal memories
 
 ---
 
-# 🌱 Product Vision
+# 📌 Project Status
 
-MuseLog is not designed to help users consume more content.
+MuseLog v1.0
 
-It explores a quieter question:
+Current features:
 
-> "What moved me, and why?"
-
-By connecting AI with personal emotions and cultural memories, MuseLog aims to create a new type of digital archive:
-
-A place that remembers not only what we experienced, but who we were when we experienced it.
-
----
-
-# 🚀 Future Improvements
-
-- More comprehensive cultural databases
-- User preference learning
-- Multimodal AI recommendation
-- Social sharing of emotional collections
-- AI-generated personal cultural maps
-- Long-term emotional memory modeling
-
+- AI-powered cultural recommendation
+- Mood-based discovery system
+- Unified cultural archive
+- Interactive emotional interface
+- Memory calendar
+- Bilingual experience
 
 ---
 
 # 👤 Author
 
-Built by **Yingyu Ding（丁映喻）**
+Built by **Yingyu Ding (丁映喻)**
 
 Architecture student exploring:
 
@@ -291,17 +376,6 @@ Architecture student exploring:
 
 ---
 
-# 📌 Project Status
+# 📄 License
 
-MuseLog v1.0
-
-Current features:
-
-✅ AI-powered cultural recommendation  
-✅ Mood-based discovery system  
-✅ Book / Film / Music archive  
-✅ Emotional bubble interface  
-✅ Personal memory calendar  
-✅ Chinese / English localization  
-
----
+MIT License
