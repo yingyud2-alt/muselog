@@ -279,7 +279,7 @@ A place that remembers not only what we experienced, but who we were when we exp
 
 # 👤 Author
 
-Built by **Yingyu Ding**
+Built by **Yingyu Ding（丁映喻）**
 
 Architecture student exploring:
 
