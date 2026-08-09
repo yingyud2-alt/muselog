@@ -1,7 +1,9 @@
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import type { Content, ContentType } from "@/lib/content/types";
+import { workToExploreContent } from "@/lib/explore/explore-content-provider";
+import { filterDisplayableApiWorks } from "@/lib/work/displayable-api-work";
+import { listImportedWorks } from "@/lib/work/imported-work-catalog";
 import { MEDIA_EXPLORE_IDS } from "@/types/media";
 import type { MediaItem } from "@/types/media";
 
@@ -27,6 +29,12 @@ export type JournalCatalogSearchResult = {
   recommendations: JournalRecommendation[];
 };
 
+function getApiCatalog(): Content[] {
+  return filterDisplayableApiWorks(listImportedWorks()).map((work) =>
+    workToExploreContent(work),
+  );
+}
+
 function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -40,15 +48,21 @@ function getJournalContentIds(items: MediaItem[]): Set<string> {
     if (item.id.startsWith("journal-")) {
       ids.add(item.id.replace(/^journal-/, ""));
     }
+    ids.add(item.id);
   }
 
   return ids;
 }
 
-function matchContent(content: Content, normalized: string): JournalRecommendationMatch | null {
+function matchContent(
+  content: Content,
+  normalized: string,
+): JournalRecommendationMatch | null {
   if (normalize(content.title).includes(normalized)) return "title";
   if (normalize(content.creator).includes(normalized)) return "creator";
-  if (content.tags.some((tag) => normalize(tag).includes(normalized))) return "tag";
+  if (content.tags.some((tag) => normalize(tag).includes(normalized))) {
+    return "tag";
+  }
   if (normalize(content.description).includes(normalized)) return "category";
   return null;
 }
@@ -59,13 +73,14 @@ function sharedTagCount(left: Content, right: Content): number {
 }
 
 function buildRelatedRecommendations(
+  catalog: Content[],
   anchor: Content,
   excluded: Set<string>,
   limit = 4,
 ): JournalRecommendation[] {
   const related: JournalRecommendation[] = [];
 
-  for (const entry of CONTENT_CATALOG) {
+  for (const entry of catalog) {
     if (entry.id === anchor.id || excluded.has(entry.id)) continue;
 
     const sharedTags = sharedTagCount(anchor, entry);
@@ -104,6 +119,7 @@ export function searchJournalCatalog(
 ): JournalCatalogSearchResult {
   const normalized = normalize(query);
   const excluded = getJournalContentIds(journalItems);
+  const catalog = getApiCatalog();
 
   if (!normalized) {
     return { query, directMatches: [], recommendations: [] };
@@ -113,7 +129,7 @@ export function searchJournalCatalog(
   const recommendations: JournalRecommendation[] = [];
   const seenRecommendations = new Set<string>();
 
-  for (const entry of CONTENT_CATALOG) {
+  for (const entry of catalog) {
     if (excluded.has(entry.id)) continue;
 
     const matchType = matchContent(entry, normalized);
@@ -121,9 +137,15 @@ export function searchJournalCatalog(
 
     directMatches.push(entry);
 
-    for (const related of buildRelatedRecommendations(entry, excluded)) {
+    for (const related of buildRelatedRecommendations(
+      catalog,
+      entry,
+      excluded,
+    )) {
       if (seenRecommendations.has(related.content.id)) continue;
-      if (directMatches.some((match) => match.id === related.content.id)) continue;
+      if (directMatches.some((match) => match.id === related.content.id)) {
+        continue;
+      }
 
       seenRecommendations.add(related.content.id);
       recommendations.push({
@@ -137,7 +159,7 @@ export function searchJournalCatalog(
   }
 
   if (directMatches.length === 0) {
-    const tagMatches = CONTENT_CATALOG.filter((entry) => {
+    const tagMatches = catalog.filter((entry) => {
       if (excluded.has(entry.id)) return false;
       return entry.tags.some((tag) => normalize(tag).includes(normalized));
     });
@@ -170,8 +192,17 @@ export function contentToSelection(content: Content) {
   };
 }
 
-export function resolveSelectionCover(mediaKey: string, fallback?: string): string {
-  return getContentByMediaKey(mediaKey)?.cover ?? fallback ?? "from-slate-800 via-slate-900 to-black";
+export function resolveSelectionCover(
+  mediaKey: string,
+  fallback?: string,
+): string {
+  const imported = listImportedWorks().find((work) => work.id === mediaKey);
+  if (imported?.coverUrl) return imported.coverUrl;
+  return (
+    getContentByMediaKey(mediaKey)?.cover ??
+    fallback ??
+    "from-slate-800 via-slate-900 to-black"
+  );
 }
 
 export function ongoingStatusLabel(type: ContentType): string {

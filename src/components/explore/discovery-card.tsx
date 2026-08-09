@@ -10,7 +10,16 @@ import type {
 import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import { openExploreDiscoveryItem } from "@/lib/explore/open-explore-work";
 import { cn } from "@/lib/utils";
+import { cleanDescription } from "@/lib/work/clean-description";
 import {
+  isRemoteCoverUrl,
+  normalizeWorkCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
+import { isApiBackedSource } from "@/lib/work/content-layers";
+import {
+  findImportedWorkByIdentity,
+  findImportedWorkByTitle,
   getImportedWorkById,
   useImportedWorkMap,
 } from "@/lib/work/imported-work-catalog";
@@ -47,17 +56,43 @@ export function DiscoveryCard({ item, className }: DiscoveryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
   const importedMap = useImportedWorkMap();
+  const expectedType =
+    item.category === "film"
+      ? "movie"
+      : item.category === "music"
+        ? "music"
+        : "book";
+
+  const importedCandidates = [
+    item.contentId
+      ? importedMap[item.contentId] ?? getImportedWorkById(item.contentId)
+      : null,
+    importedMap[item.id] ?? getImportedWorkById(item.id),
+    findImportedWorkByIdentity(item.title, item.creator),
+    findImportedWorkByTitle(item.title),
+  ].filter((work): work is NonNullable<typeof work> => Boolean(work));
 
   const imported =
-    (item.contentId
-      ? importedMap[item.contentId] ?? getImportedWorkById(item.contentId)
-      : null) ??
-    importedMap[item.id] ??
-    getImportedWorkById(item.id);
-  const coverUrl =
-    imported?.coverUrl || item.coverUrl || item.cover;
-  const description =
-    imported?.description?.trim() || item.reason.trim() || "";
+    importedCandidates.find(
+      (work) =>
+        work.type === expectedType &&
+        isApiBackedSource(work.source) &&
+        isRemoteCoverUrl(work.coverUrl),
+    ) ??
+    importedCandidates.find(
+      (work) =>
+        work.type === expectedType && isApiBackedSource(work.source),
+    ) ??
+    null;
+
+  // API / imported cover wins; never let a seed gradient replace a remote URL.
+  const coverUrl = normalizeWorkCoverUrl(
+    resolveCoverUrl(imported?.coverUrl, item.coverUrl, item.cover),
+    { source: imported?.source ?? item.workSource },
+  );
+  const description = cleanDescription(
+    imported?.description || item.reason,
+  );
   const rawTags = imported?.moodTags?.length
     ? imported.moodTags
     : imported?.genres ?? [];
@@ -145,6 +180,7 @@ export function DiscoveryCard({ item, className }: DiscoveryCardProps) {
             title: item.title,
             cover: coverUrl,
             coverUrl,
+            source: imported?.source ?? item.workSource,
           }}
           variant="compact"
           hideTitle

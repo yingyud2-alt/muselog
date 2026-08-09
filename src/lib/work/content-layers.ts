@@ -2,8 +2,10 @@
  * MuseLog content architecture — two layers.
  *
  * A. Public Content Catalog (discovery / search only)
- *    - API imports: Open Library (future TMDB / Spotify)
- *    - Mock seed: content-data.ts (FALLBACK only — not user-owned)
+ *    - API imports: Open Library / TMDB / Last.fm
+ *    - Live surfaces accept only displayable API Works
+ *      (`isDisplayableApiWork` in displayable-api-work.ts)
+ *    - Mock CONTENT_CATALOG is a development empty-state fallback only
  *    Fields: title, creator, coverUrl, description, releaseDate,
  *            genres, externalId, source
  *    Users do NOT own these until they act.
@@ -15,7 +17,7 @@
  *
  * Priority when resolving public identity:
  *    1. API imported Work (real coverUrl)
- *    2. Mock CONTENT_CATALOG (gradient placeholders)
+ *    2. Dev-only mock CONTENT_CATALOG (never on production live surfaces)
  */
 
 export const CONTENT_LAYER = {
@@ -32,7 +34,19 @@ export function isApiBackedSource(source: string | undefined | null): boolean {
   return (
     value === "open_library" ||
     value === "tmdb" ||
+    value === "lastfm" ||
     value === "spotify" ||
     value === "musicbrainz"
+  );
+}
+
+/** Production display providers (stricter than isApiBackedSource). */
+export function isProductionApiSource(
+  source: string | undefined | null,
+): boolean {
+  if (!source) return false;
+  const value = source.trim().toLowerCase();
+  return (
+    value === "open_library" || value === "tmdb" || value === "lastfm"
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { RecommendationBatchModal } from "@/components/detail/recommendation-batch-modal";
+import { JournalMemoryDetailModal } from "@/components/journal/journal-memory-detail-modal";
 import { JournalQuickLogModal } from "@/components/journal/journal-quick-log-modal";
 import { WorkDetailModal } from "@/components/work-detail-modal";
 import { WorkPreviewModal } from "@/components/work-preview-modal";
@@ -11,7 +12,7 @@ const BASE_Z = 70;
 
 /**
  * Global host for in-place work overlays.
- * Explore / Library use WorkDetailModal; bubbles may use WorkPreviewModal.
+ * Explore / Library use WorkDetailModal; Journal calendar uses JournalMemoryDetailModal.
  * Scroll position is restored by the overlay store on close.
  */
 export function DetailOverlayHost() {
@@ -48,6 +49,18 @@ export function DetailOverlayHost() {
               lockScroll={false}
               zIndex={zIndex}
               showExploreMore={Boolean(layer.recommendation)}
+            />
+          );
+        }
+
+        if (layer.type === "journal-memory-detail") {
+          return (
+            <JournalMemoryDetailModal
+              key={`memory-${layer.entryId}-${index}`}
+              entryId={layer.entryId}
+              onClose={closeDetail}
+              lockScroll={false}
+              zIndex={zIndex}
             />
           );
         }

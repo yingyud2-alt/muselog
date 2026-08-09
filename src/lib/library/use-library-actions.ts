@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import {
   buildJournalItemFromMediaKey,
+  mediaKeyFromJournalItemId,
   resolveJournalItemId,
 } from "@/lib/content/bubble-content-bridge";
 import { removeMemory, upsertMemory } from "@/lib/content/memory-store";
@@ -69,16 +70,17 @@ export function useLibraryItemActions(item: LibraryItem | null) {
         type: item.type,
       },
     );
+    const canonicalKey = mediaKeyFromJournalItemId(journalEntry.id);
 
     addEntry(journalEntry);
-    upsertUserMediaState(item.mediaKey, {
+    upsertUserMediaState(canonicalKey, {
       status: "ONGOING",
       startDate: today,
       endDate: undefined,
       addedToJournal: true,
       title: item.title,
       creator: item.creator,
-      cover: item.cover,
+      cover: journalEntry.cover,
       mediaType: item.type,
     });
     syncMemory("ONGOING");
@@ -129,9 +131,10 @@ export function useLibraryItemActions(item: LibraryItem | null) {
           type: item.type,
         },
       );
+      const canonicalKey = mediaKeyFromJournalItemId(journalEntry.id);
 
       addEntry(journalEntry);
-      upsertUserMediaState(item.mediaKey, {
+      upsertUserMediaState(canonicalKey, {
         status: "FINISHED",
         progress: 100,
         rating: values.rating,
@@ -141,7 +144,7 @@ export function useLibraryItemActions(item: LibraryItem | null) {
         addedToJournal: true,
         title: item.title,
         creator: item.creator,
-        cover: item.cover,
+        cover: journalEntry.cover,
         mediaType: item.type,
       });
       syncMemory("FINISHED", {
@@ -190,9 +193,10 @@ export function useLibraryItemActions(item: LibraryItem | null) {
         type: item.type,
       },
     );
+    const canonicalKey = mediaKeyFromJournalItemId(journalEntry.id);
 
     addEntry(journalEntry);
-    upsertUserMediaState(item.mediaKey, {
+    upsertUserMediaState(canonicalKey, {
       status: "ONGOING",
       startDate: today,
       endDate: undefined,
@@ -200,7 +204,7 @@ export function useLibraryItemActions(item: LibraryItem | null) {
       addedToJournal: true,
       title: item.title,
       creator: item.creator,
-      cover: item.cover,
+      cover: journalEntry.cover,
       mediaType: item.type,
     });
     syncMemory("ONGOING");

@@ -19,6 +19,11 @@ export type JourneySegment = {
   lane: number;
 };
 
+/** Multi-day cultural journey — single-day memories stay as normal cards. */
+export function isMultiDayJourney(item: MediaItem): boolean {
+  return getJourneyStart(item) !== getJourneyEnd(item);
+}
+
 function assignGlobalItemLanes(items: MediaItem[]): Map<string, number> {
   const sorted = [...items].sort((left, right) => {
     const startCompare = getJourneyStart(left).localeCompare(getJourneyStart(right));
@@ -48,14 +53,14 @@ function assignGlobalItemLanes(items: MediaItem[]): Map<string, number> {
 }
 
 /**
- * Place journey bars by normalized start/end YYYY-MM-DD.
- * Quick Memory (date === startDate === endDate) lands on that single cell.
+ * Place journey progress lines by normalized start/end YYYY-MM-DD.
+ * Only multi-day entries (startDate !== endDate) produce segments.
  */
 export function computeJourneySegments(
   items: MediaItem[],
   weeks: CalendarWeek[],
 ): Map<number, JourneySegment[]> {
-  const journeyItems = filterJourneyItems(items);
+  const journeyItems = filterJourneyItems(items).filter(isMultiDayJourney);
   const itemLanes = assignGlobalItemLanes(journeyItems);
   const result = new Map<number, JourneySegment[]>();
 
@@ -102,17 +107,17 @@ export function computeJourneySegments(
   return result;
 }
 
+/** Subtle bottom track — thin progress lines, not Gantt bars. */
 export const MOBILE_JOURNAL_OVERLAY = {
-  /** Space reserved under covers for period lines. */
-  lineZoneHeight: 8,
-  laneStep: 4,
-  trackHeight: 8,
-  dateZoneHeight: 18,
+  lineZoneHeight: 10,
+  laneStep: 3,
+  trackHeight: 2,
+  bottomInset: 5,
 } as const;
 
 export const DESKTOP_JOURNAL_OVERLAY = {
-  lineZoneHeight: 10,
-  laneStep: 5,
-  trackHeight: 10,
-  dateZoneHeight: 20,
+  lineZoneHeight: 12,
+  laneStep: 4,
+  trackHeight: 2,
+  bottomInset: 6,
 } as const;

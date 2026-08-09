@@ -9,8 +9,10 @@ import {
 } from "react";
 import { motion, useMotionValue } from "framer-motion";
 
+import { useLanguage } from "@/components/i18n/language-provider";
+import { useMoodBubbles } from "@/hooks/use-mood-bubbles";
 import { openBubblePreview } from "@/lib/work/open-bubble-preview";
-import { getWorkBubblesForContainer, type WorkBubble } from "./mood-bubble-data";
+import type { WorkBubble } from "./mood-bubble-data";
 import { MobileBubbleExperience } from "./mobile-bubble-experience";
 import {
   BubbleContent,
@@ -346,6 +348,7 @@ function DesktopBubbleHero() {
   const rafRef = useRef<number>(0);
   const clusterRef = useRef<FocusCluster>(EMPTY_CLUSTER);
   const measuredSizeRef = useRef({ width: 0, height: 0 });
+  const { t } = useLanguage();
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [cluster, setCluster] = useState<FocusCluster>(EMPTY_CLUSTER);
@@ -354,10 +357,10 @@ function DesktopBubbleHero() {
 
   const primaryNudgeX = useMotionValue(0);
   const primaryNudgeY = useMotionValue(0);
+  const { bubbles, mood, reshuffle } = useMoodBubbles(containerSize.width);
 
   const layout = useMemo(() => {
-    const works = getWorkBubblesForContainer(containerSize.width);
-    const scaledWorks = works.map((work) => ({
+    const scaledWorks = bubbles.map((work) => ({
       ...work,
       baseSize: work.alwaysVisible
         ? Math.round(work.baseSize * DESKTOP_FEATURED_SIZE_SCALE)
@@ -371,7 +374,7 @@ function DesktopBubbleHero() {
     );
 
     return applyDesktopBubbleFieldOffset(packed, DESKTOP_BUBBLE_FIELD_OFFSET_Y);
-  }, [containerSize.height, containerSize.width]);
+  }, [bubbles, containerSize.height, containerSize.width]);
 
   const updateInteraction = useCallback(() => {
     const pointer = pointerRef.current;
@@ -507,6 +510,7 @@ function DesktopBubbleHero() {
   };
 
   const handleSelect = (work: WorkBubble) => {
+    if (!work.workId?.trim()) return;
     openBubblePreview(work);
   };
 
@@ -542,20 +546,18 @@ function DesktopBubbleHero() {
         />
       ))}
 
-      <BubbleAiMoodLabel />
+      <BubbleAiMoodLabel mood={mood} onReshuffle={reshuffle} />
 
       <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
-        <div className="w-full max-w-[min(92vw,640px)] px-4 text-center md:max-w-[720px]">
+        <div className="font-brand-hero-group w-full max-w-[min(92vw,640px)] px-4 text-center md:max-w-[720px]">
           <h2
-            className="font-hero text-[28px] font-medium sm:text-[32px] md:whitespace-nowrap md:text-[34px] xl:text-[36px] 2xl:text-[40px]"
+            className="font-brand-hero font-hero text-[28px] font-medium leading-[1.08] tracking-[-0.025em] sm:text-[32px] md:whitespace-nowrap md:text-[34px] xl:text-[36px] 2xl:text-[40px]"
             style={{
               color: TEXT_COLORS.heading,
-              letterSpacing: "-0.025em",
-              lineHeight: 1.08,
               textShadow: "0 8px 32px rgba(13,17,23,0.55)",
             }}
           >
-            What inspires you today?
+            {t("hero.title")}
           </h2>
           <p
             className="font-display whitespace-nowrap text-[13px] font-normal md:text-[14px]"
@@ -564,14 +566,14 @@ function DesktopBubbleHero() {
               marginTop: 12,
             }}
           >
-            Discover something that matches your mood
+            {t("hero.subtitle")}
           </p>
         </div>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center md:bottom-10">
         <div className="pointer-events-auto">
-          <SurpriseMuseButton />
+          <SurpriseMuseButton onReshuffleBubbles={reshuffle} />
         </div>
       </div>
 

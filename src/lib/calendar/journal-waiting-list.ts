@@ -1,9 +1,17 @@
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
 import { getAllUserContent } from "@/lib/content/user-content-store";
 import type { Content, ContentType } from "@/lib/content/types";
+import { workToExploreContent } from "@/lib/explore/explore-content-provider";
+import { filterDisplayableApiWorks } from "@/lib/work/displayable-api-work";
+import { listImportedWorks } from "@/lib/work/imported-work-catalog";
 import { MEDIA_EXPLORE_IDS } from "@/types/media";
 import type { MediaItem, MediaType } from "@/types/media";
+
+function getApiWaitingCatalog(): Content[] {
+  return filterDisplayableApiWorks(listImportedWorks()).map((work) =>
+    workToExploreContent(work),
+  );
+}
 
 export type WaitingTab = "read" | "watch" | "listen";
 
@@ -114,7 +122,7 @@ export function getWaitingList(
   const inJournal = getJournalContentIds(items);
   const contentType = TAB_TO_CONTENT[tab];
 
-  const catalogItems = CONTENT_CATALOG.filter(
+  const catalogItems = getApiWaitingCatalog().filter(
     (entry) => entry.type === contentType && !inJournal.has(entry.id),
   );
 
@@ -143,8 +151,10 @@ export function searchWaitingContent(
   const normalized = query.trim().toLowerCase();
   const inJournal = getJournalContentIds(items);
 
+  const catalog = getApiWaitingCatalog();
+
   if (!normalized) {
-    return CONTENT_CATALOG.filter((entry) => !inJournal.has(entry.id));
+    return catalog.filter((entry) => !inJournal.has(entry.id));
   }
 
   const userMatches = getUserWantItems(inJournal, "BOOK")
@@ -158,16 +168,19 @@ export function searchWaitingContent(
     });
 
   const seen = new Set<string>();
-  return CONTENT_CATALOG.filter((entry) => {
-    if (inJournal.has(entry.id)) return false;
-    if (entry.title.toLowerCase().includes(normalized)) return true;
-    if (entry.creator.toLowerCase().includes(normalized)) return true;
-    return entry.tags.some((tag) => tag.toLowerCase().includes(normalized));
-  }).concat(userMatches).filter((entry) => {
-    if (seen.has(entry.id)) return false;
-    seen.add(entry.id);
-    return true;
-  });
+  return catalog
+    .filter((entry) => {
+      if (inJournal.has(entry.id)) return false;
+      if (entry.title.toLowerCase().includes(normalized)) return true;
+      if (entry.creator.toLowerCase().includes(normalized)) return true;
+      return entry.tags.some((tag) => tag.toLowerCase().includes(normalized));
+    })
+    .concat(userMatches)
+    .filter((entry) => {
+      if (seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    });
 }
 
 export function contentToJournalItem(

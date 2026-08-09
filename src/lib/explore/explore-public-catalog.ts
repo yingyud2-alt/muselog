@@ -2,7 +2,10 @@
 
 /**
  * Explore React adapters — UI-facing hooks over explore-content-provider.
- * Data priority (books): Open Library → other API → CONTENT_CATALOG fallback.
+ * Data priority:
+ *   Books  → Open Library
+ *   Films  → TMDB
+ *   Music  → Last.fm
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -12,8 +15,9 @@ import type { Content, ContentType, CuratedList } from "@/lib/content/types";
 import {
   buildBookDiscoverySections,
   buildCuratedListsFromFeed,
-  buildEditorialDiscoverySections,
   buildExploreContentList,
+  buildFilmDiscoverySections,
+  buildMusicDiscoverySections,
   buildMoodTagMap,
   collectApiWorks,
   getExploreApiFeedCache,
@@ -58,6 +62,10 @@ function useExploreApiFeed() {
       : feed &&
           (feed.trending.length > 0 ||
             feed.popular.length > 0 ||
+            (feed.trendingMovies?.length ?? 0) > 0 ||
+            (feed.popularMovies?.length ?? 0) > 0 ||
+            (feed.trendingMusic?.length ?? 0) > 0 ||
+            (feed.popularMusic?.length ?? 0) > 0 ||
             Object.values(feed.byMood).some((list) => list.length > 0))
         ? "api"
         : "fallback";
@@ -80,10 +88,13 @@ export function useExploreContentCatalog(): Content[] {
   const { allWorks: userLibraryWorks } = useWorks();
 
   return useMemo(() => {
-    const importedBooks = Object.values(importedMap).filter(
-      (work) => work.type === "book",
+    const importedWorks = Object.values(importedMap).filter(
+      (work) =>
+        work.type === "book" ||
+        work.type === "movie" ||
+        work.type === "music",
     );
-    const apiWorks = collectApiWorks(feed ?? null, importedBooks);
+    const apiWorks = collectApiWorks(feed ?? null, importedWorks);
 
     if (apiWorks.length > 0) {
       return buildExploreContentList(
@@ -114,7 +125,7 @@ export function useExploreCuratedLists(): CuratedList[] {
 }
 
 export function useExploreDiscoverySections(category: DiscoveryCategory) {
-  const { feed, mode } = useExploreApiFeed();
+  const { feed } = useExploreApiFeed();
   const importedMap = useImportedWorkMap();
 
   return useMemo(() => {
@@ -123,16 +134,27 @@ export function useExploreDiscoverySections(category: DiscoveryCategory) {
         (work) => work.type === "book",
       );
       const sections = buildBookDiscoverySections(feed ?? null, importedBooks);
-      // Books are API-only when any public catalog data exists —
-      // never mix CONTENT_CATALOG / editorial mock into Trending / New Releases.
       if (sections.length > 0) return sections;
-      if (mode === "loading") return [];
+      // API-only: never fall back to editorial / CONTENT_CATALOG mock seeds.
       return [];
     }
 
-    // Film / music — editorial seed until TMDB / Spotify providers land.
-    return buildEditorialDiscoverySections(category);
-  }, [category, feed, mode, importedMap]);
+    if (category === "film") {
+      const importedMovies = Object.values(importedMap).filter(
+        (work) => work.type === "movie",
+      );
+      return buildFilmDiscoverySections(feed ?? null, importedMovies);
+    }
+
+    if (category === "music") {
+      const importedMusic = Object.values(importedMap).filter(
+        (work) => work.type === "music",
+      );
+      return buildMusicDiscoverySections(feed ?? null, importedMusic);
+    }
+
+    return [];
+  }, [category, feed, importedMap]);
 }
 
 export function useExploreCatalogMode(): ExploreCatalogMode {

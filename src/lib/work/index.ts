@@ -54,15 +54,26 @@ export {
 export {
   createImportedWork,
   IMPORTED_WORK_PLACEHOLDER_COVER,
+  lastfmWorkId,
   openLibraryWorkId,
+  tmdbWorkId,
   type ImportedWorkInput,
 } from "@/lib/work/create-imported-work";
 
 export {
+  coverCandidatesFromMetadata,
   FALLBACK_COVER,
+  isGradientCover,
   isRemoteCoverUrl,
+  normalizeWorkCoverUrl,
   resolveCoverUrl,
+  withNormalizedCoverUrl,
 } from "@/lib/work/cover-url";
+
+export {
+  cleanDescription,
+  DESCRIPTION_FALLBACK,
+} from "@/lib/work/clean-description";
 
 export {
   normalizeIdentityText,
@@ -76,6 +87,7 @@ export {
   listImportedWorks,
   persistImportedWork,
   removeImportedWork,
+  resolveImportedWork,
   useImportedWorkMap,
 } from "@/lib/work/imported-work-catalog";
 
@@ -84,3 +96,19 @@ export {
   isApiBackedSource,
   type ContentLayer,
 } from "@/lib/work/content-layers";
+
+export {
+  findImportedApiWorkByTitle,
+  isApiWorkId,
+  isLegacyCatalogWorkId,
+  logCanonicalWorkVerification,
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+  resolveCanonicalWorkId,
+  toCanonicalWorkLog,
+  VERIFY_TITLES,
+  type CanonicalWorkLog,
+  type ResolveCanonicalWorkInput,
+} from "@/lib/work/resolve-canonical-work";
+
+export { migrateCanonicalWorkIds } from "@/lib/work/migrate-canonical-work-ids";

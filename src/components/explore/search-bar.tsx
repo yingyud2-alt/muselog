@@ -8,10 +8,7 @@ type SearchBarProps = {
   placeholder?: string;
 };
 
-export function SearchBar({
-  className,
-  placeholder = "Search books, movies, albums...",
-}: SearchBarProps) {
+export function SearchBar({ className, placeholder }: SearchBarProps) {
   return (
     <MediaSearchBar
       className={cn(className)}

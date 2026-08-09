@@ -4,6 +4,13 @@ import { TYPE_JOURNEY_COLORS } from "@/types/media";
 
 import { CONTENT_CATALOG } from "./content-data";
 import type { Content, ContentType } from "./types";
+import { workToExploreContent } from "@/lib/explore/explore-content-provider";
+import {
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWorkId,
+} from "@/lib/work/resolve-canonical-work";
+import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
+import { isDisplayableApiWork } from "@/lib/work/displayable-api-work";
 
 const CONTENT_TO_MEDIA: Record<ContentType, MediaType> = {
   BOOK: "book",
@@ -18,21 +25,37 @@ const BUBBLE_TYPE_TO_CONTENT: Partial<Record<WorkBubble["type"], ContentType>> =
 };
 
 export function findCatalogContentForBubble(work: WorkBubble): Content | null {
+  if (work.workId) {
+    const imported = getImportedWorkById(work.workId);
+    if (imported && isDisplayableApiWork(imported)) {
+      return workToExploreContent(imported);
+    }
+  }
+
   const contentType = BUBBLE_TYPE_TO_CONTENT[work.type];
   if (!contentType) return null;
 
-  return (
-    CONTENT_CATALOG.find(
-      (entry) =>
-        entry.type === contentType &&
-        entry.title.toLowerCase() === work.title.toLowerCase() &&
-        entry.creator.toLowerCase() === work.creator.toLowerCase(),
-    ) ?? null
-  );
+  // Title match against imported API catalog only — never mock CONTENT_CATALOG.
+  // (CONTENT_CATALOG kept for legacy getContentByMediaKey migration helpers.)
+  return null;
 }
 
 export function resolveBubbleMediaKey(work: WorkBubble): string {
-  return findCatalogContentForBubble(work)?.id ?? `bubble-${work.id}`;
+  if (work.workId?.trim()) {
+    return resolveCanonicalWorkId({
+      workId: work.workId,
+      title: work.title,
+      creator: work.creator,
+      type: work.type,
+    });
+  }
+
+  return resolveCanonicalWorkId({
+    workId: `bubble-${work.id}`,
+    title: work.title,
+    creator: work.creator,
+    type: work.type,
+  });
 }
 
 export function resolveJournalItemId(mediaKey: string): string {
@@ -57,18 +80,25 @@ export function buildJournalItemFromWork(
   const mediaKey = resolveBubbleMediaKey(work);
 
   return {
+    ...partial,
     id: resolveJournalItemId(mediaKey),
     type: bubbleTypeToMediaType(work.type),
     title: work.title,
     creator: work.creator,
-    cover: content?.cover ?? "from-slate-800 via-slate-900 to-black",
-    quote: work.quote,
-    note: "",
-    tags: (content?.tags ?? []).slice(0, 3),
-    rating: 0,
-    memories: [],
-    journeyColor: defaultJourneyColorForWork(work),
-    ...partial,
+    cover: resolveCanonicalCoverUrl({
+      workId: mediaKey,
+      title: work.title,
+      creator: work.creator,
+      type: work.type,
+      catalogCover: content?.cover,
+      journalCover: partial.cover,
+    }),
+    quote: partial.quote ?? work.quote,
+    note: partial.note ?? "",
+    tags: partial.tags ?? (content?.tags ?? []).slice(0, 3),
+    rating: partial.rating ?? 0,
+    memories: partial.memories ?? [],
+    journeyColor: partial.journeyColor ?? defaultJourneyColorForWork(work),
   };
 }
 
@@ -78,6 +108,11 @@ export function mediaKeyFromJournalItemId(journalItemId: string): string {
 
 export function getContentByMediaKey(mediaKey: string): Content | null {
   if (mediaKey.startsWith("bubble-")) return null;
+  const imported = getImportedWorkById(mediaKey);
+  if (imported && isDisplayableApiWork(imported)) {
+    return workToExploreContent(imported);
+  }
+  // Legacy lookup for migration only — callers on live surfaces should use API ids.
   return CONTENT_CATALOG.find((entry) => entry.id === mediaKey) ?? null;
 }
 
@@ -112,6 +147,9 @@ export function buildJournalItemFromMediaKey(
   },
 ): MediaItem {
   const content = getContentByMediaKey(mediaKey);
+  const title = content?.title ?? fallback?.title ?? "Untitled";
+  const creator = content?.creator ?? fallback?.creator ?? "";
+  const typeHint = content?.type ?? fallback?.type ?? "BOOK";
   const type = content
     ? contentTypeToMediaType(content.type)
     : fallback
@@ -122,23 +160,37 @@ export function buildJournalItemFromMediaKey(
             : "music")
       : "book";
 
+  // Persist canonical API workId when available (not legacy catalog id).
+  const canonicalKey = resolveCanonicalWorkId({
+    workId: mediaKey,
+    title,
+    creator,
+    type: typeHint,
+  });
+
+  const cover = resolveCanonicalCoverUrl({
+    workId: canonicalKey,
+    title,
+    creator,
+    type: typeHint,
+    libraryCover: fallback?.cover,
+    journalCover: partial.cover,
+    catalogCover: content?.cover,
+  });
+
   return {
-    id: resolveJournalItemId(mediaKey),
-    type,
-    title: content?.title ?? fallback?.title ?? "Untitled",
-    creator: content?.creator ?? fallback?.creator ?? "",
-    cover:
-      content?.cover ??
-      fallback?.cover ??
-      "from-slate-800 via-slate-900 to-black",
-    quote: fallback?.quote ?? "",
-    note: "",
-    tags: (content?.tags ?? fallback?.tags ?? []).slice(0, 3),
-    rating: 0,
-    memories: [],
-    journeyColor: defaultJourneyColorForType(
-      content?.type ?? fallback?.type ?? "BOOK",
-    ),
     ...partial,
+    id: resolveJournalItemId(canonicalKey),
+    type,
+    title: partial.title ?? title,
+    creator: partial.creator ?? creator,
+    cover,
+    quote: partial.quote ?? fallback?.quote ?? "",
+    note: partial.note ?? "",
+    tags: partial.tags ?? (content?.tags ?? fallback?.tags ?? []).slice(0, 3),
+    rating: partial.rating ?? 0,
+    memories: partial.memories ?? [],
+    journeyColor:
+      partial.journeyColor ?? defaultJourneyColorForType(typeHint),
   };
 }

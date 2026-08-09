@@ -9,6 +9,7 @@ import {
   DashboardGlassCard,
   DashboardSectionHeader,
 } from "@/components/dashboard/dashboard-glass-card";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { CustomizeMoodPanel } from "@/components/journal/customize-mood-panel";
 import { MonthNavigator } from "@/components/journal/month-navigator";
 import { useActiveMonth } from "@/lib/calendar/active-month-store";
@@ -38,20 +39,21 @@ export function YourJourneyCard({
   const { monthLabel, goPrev, goNext } = useActiveMonth();
   const { profile } = useMoodPreferences();
   const [moodOpen, setMoodOpen] = useState(false);
+  const { t } = useLanguage();
 
   const moodKeywords = deriveAiMoodKeywords(profile, journeyStats.moods);
 
   return (
     <section className="space-y-4">
       <DashboardSectionHeader
-        title="Your Journey"
+        title={t("page.yourJourney")}
         description="A personal reflection on your cultural rhythm"
         action={
           <Link
             href="/journal"
             className="font-display text-sm text-white/45 transition hover:text-white/72"
           >
-            See More
+            {t("action.seeMore")}
           </Link>
         }
       />

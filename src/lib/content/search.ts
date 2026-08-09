@@ -1,16 +1,25 @@
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import type { Memory } from "@/lib/content/types";
 import type { Content, ContentType } from "@/lib/content/types";
 import type { UserContentItem } from "@/lib/content/user-content-store";
+import { workToExploreContent } from "@/lib/explore/explore-content-provider";
 import type { LibraryItem } from "@/lib/library/library-types";
+import { filterDisplayableApiWorks } from "@/lib/work/displayable-api-work";
+import { listImportedWorks } from "@/lib/work/imported-work-catalog";
 
 /**
  * Local + remote media search.
  * Priority when merging (see use-media-search):
- *   API open_library > user library/memory > mock CONTENT_CATALOG fallback.
+ *   API open_library / TMDB / Last.fm > user library/memory.
+ * Mock CONTENT_CATALOG is never returned on live surfaces.
  */
+
+function getApiSearchCatalog(): Content[] {
+  return filterDisplayableApiWorks(listImportedWorks()).map((work) =>
+    workToExploreContent(work),
+  );
+}
 
 export type MediaSearchMatchField = "title" | "creator" | "tag" | "note";
 
@@ -43,11 +52,19 @@ function normalize(value: string): string {
 }
 
 function resolveHref(contentId: string | null, mediaKey: string): string {
-  if (contentId && CONTENT_CATALOG.some((entry) => entry.id === contentId)) {
+  const catalog = getApiSearchCatalog();
+  if (contentId && catalog.some((entry) => entry.id === contentId)) {
     return `/explore/${contentId}`;
   }
 
-  if (mediaKey && CONTENT_CATALOG.some((entry) => entry.id === mediaKey)) {
+  if (mediaKey && catalog.some((entry) => entry.id === mediaKey)) {
+    return `/explore/${mediaKey}`;
+  }
+
+  if (contentId?.match(/^(ol-|tmdb-|lastfm-)/i)) {
+    return `/explore/${contentId}`;
+  }
+  if (mediaKey?.match(/^(ol-|tmdb-|lastfm-)/i)) {
     return `/explore/${mediaKey}`;
   }
 
@@ -130,7 +147,7 @@ export function searchContentCatalog(query: string): SearchResult[] {
 
   const results: SearchResult[] = [];
 
-  for (const item of CONTENT_CATALOG) {
+  for (const item of getApiSearchCatalog()) {
     const matchField = matchContent(item, normalized);
     if (matchField) {
       results.push({ ...item, matchField });
@@ -221,14 +238,13 @@ export function searchMedia(
     });
   }
 
-  for (const item of CONTENT_CATALOG) {
+  for (const item of getApiSearchCatalog()) {
     if (seen.has(item.id)) continue;
 
     const matchField = matchContent(item, normalized);
     if (!matchField) continue;
 
     seen.add(item.id);
-    // Mock catalog tier — lowest priority; API imports overlay in use-media-search.
     results.push({
       id: item.id,
       title: item.title,

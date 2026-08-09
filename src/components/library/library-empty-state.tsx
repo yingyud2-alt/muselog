@@ -1,25 +1,25 @@
 "use client";
 
+import { useLanguage } from "@/components/i18n/language-provider";
 import { MuseEmptyState } from "@/components/shared/muse-empty-state";
+import {
+  libraryStatusFilterLabel,
+  libraryTypeFilterLabel,
+} from "@/lib/i18n/labels";
 import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
 } from "@/lib/library/library-types";
 import { cn } from "@/lib/utils";
 
-const TYPE_OPTIONS: Array<{ id: LibraryTypeFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "BOOK", label: "Books" },
-  { id: "MOVIE", label: "Movies" },
-  { id: "MUSIC", label: "Music" },
-];
+const TYPE_OPTIONS: LibraryTypeFilter[] = ["all", "BOOK", "MOVIE", "MUSIC"];
 
-const STATUS_OPTIONS: Array<{ id: LibraryStatusFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "WANT", label: "Want" },
-  { id: "ONGOING", label: "Reading" },
-  { id: "FINISHED", label: "Finished" },
-  { id: "DROPPED", label: "Dropped" },
+const STATUS_OPTIONS: LibraryStatusFilter[] = [
+  "all",
+  "WANT",
+  "ONGOING",
+  "FINISHED",
+  "DROPPED",
 ];
 
 type LibraryEmptyStateProps = {
@@ -33,12 +33,14 @@ export function LibraryEmptyState({
   typeFilter,
   statusFilter,
 }: LibraryEmptyStateProps) {
-  let title = "No memories yet.";
-  let description = "Start your first journey and build a quiet archive.";
+  const { t } = useLanguage();
+
+  let title = t("empty.genericTitle");
+  let description = t("empty.genericDescription");
 
   if (query) {
-    title = "Nothing matches this search.";
-    description = "Try another title, creator, or mood.";
+    title = t("empty.searchTitle");
+    description = t("empty.searchDescription");
   } else if (statusFilter === "FINISHED" && typeFilter === "MOVIE") {
     title = "No finished movies yet.";
     description = "When a film stays with you, mark it finished here.";
@@ -63,7 +65,7 @@ export function LibraryEmptyState({
     <MuseEmptyState
       title={title}
       description={description}
-      actionLabel="Start your first journey"
+      actionLabel={t("nav.explore")}
       actionHref="/explore"
     />
   );
@@ -108,25 +110,27 @@ export function LibraryFilters({
   onStatusChange,
   className,
 }: LibraryFiltersProps) {
+  const { t } = useLanguage();
+
   return (
     <div className={cn("space-y-3", className)}>
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible">
-        {TYPE_OPTIONS.map((option) => (
+        {TYPE_OPTIONS.map((id) => (
           <FilterChip
-            key={option.id}
-            label={option.label}
-            active={typeFilter === option.id}
-            onClick={() => onTypeChange(option.id)}
+            key={id}
+            label={libraryTypeFilterLabel(t, id)}
+            active={typeFilter === id}
+            onClick={() => onTypeChange(id)}
           />
         ))}
       </div>
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible">
-        {STATUS_OPTIONS.map((option) => (
+        {STATUS_OPTIONS.map((id) => (
           <FilterChip
-            key={option.id}
-            label={option.label}
-            active={statusFilter === option.id}
-            onClick={() => onStatusChange(option.id)}
+            key={id}
+            label={libraryStatusFilterLabel(t, id)}
+            active={statusFilter === id}
+            onClick={() => onStatusChange(id)}
           />
         ))}
       </div>

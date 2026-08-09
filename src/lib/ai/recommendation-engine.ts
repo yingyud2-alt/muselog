@@ -1,5 +1,13 @@
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
 import type { Content, ContentType } from "@/lib/content/types";
+import { workToExploreContent } from "@/lib/explore/explore-content-provider";
+import { filterDisplayableApiWorks } from "@/lib/work/displayable-api-work";
+import { listImportedWorks } from "@/lib/work/imported-work-catalog";
+
+function getRecommendationCatalog(): Content[] {
+  return filterDisplayableApiWorks(listImportedWorks()).map((work) =>
+    workToExploreContent(work),
+  );
+}
 
 export type RecommendationMedia = {
   mediaKey?: string;
@@ -179,17 +187,12 @@ function findAnchorTitle(
   if (best && best.score >= 3) return best.title;
 
   // Same creator as a liked work
-  const sameCreator = candidates.find(
-    (candidate) =>
-      input.userMedia.some(
-        (item) =>
-          item.title === candidate.title &&
-          CONTENT_CATALOG.some(
-            (entry) =>
-              entry.title === item.title &&
-              entry.creator === content.creator,
-          ),
-      ),
+  const sameCreator = candidates.find((candidate) =>
+    input.userMedia.some(
+      (item) =>
+        item.title === candidate.title &&
+        content.creator.trim().length > 0,
+    ),
   );
 
   return sameCreator?.title ?? candidates[0]?.title;
@@ -248,7 +251,9 @@ export function generateRecommendations(
   const preferredTags = extractPreferredTags(input);
   const preferredTypes = extractPreferredTypes(input);
 
-  const ranked = CONTENT_CATALOG.filter((content) => !isOwned(content, owned))
+  const catalog = getRecommendationCatalog();
+  const ranked = catalog
+    .filter((content) => !isOwned(content, owned))
     .map((content) => {
       const { score, sharedTags } = scoreContent(
         content,
@@ -278,8 +283,8 @@ export function generateRecommendations(
     return ranked.slice(0, limit);
   }
 
-  // Catalog exhausted — return soft curated fallbacks from catalog anyway
-  return CONTENT_CATALOG.slice(0, limit).map((content, index) => ({
+  // Soft fallback from displayable API catalog only — never mock CONTENT_CATALOG.
+  return catalog.slice(0, limit).map((content, index) => ({
     id: content.id,
     title: content.title,
     creator: content.creator,
@@ -287,7 +292,7 @@ export function generateRecommendations(
     cover: content.cover,
     tags: content.tags,
     becauseOf: "your quiet archive",
-    reason: "Because you liked exploring reflective worlds",
+    reason: "From the public API catalog",
     score: limit - index,
   }));
 }
@@ -302,8 +307,21 @@ export function pickSurpriseRecommendation(
   );
 
   if (pool.length === 0) {
-    const fallback = CONTENT_CATALOG.find((entry) => entry.id !== excludeId)
-      ?? CONTENT_CATALOG[0];
+    const catalog = getRecommendationCatalog();
+    const fallback =
+      catalog.find((entry) => entry.id !== excludeId) ?? catalog[0];
+    if (!fallback) {
+      return {
+        id: "empty",
+        title: "Nothing to suggest yet",
+        creator: "MuseLog",
+        type: "BOOK",
+        cover: "",
+        tags: [],
+        reason: "Explore API-backed works to unlock picks",
+        score: 0,
+      };
+    }
     return {
       id: fallback.id,
       title: fallback.title,
@@ -311,7 +329,7 @@ export function pickSurpriseRecommendation(
       type: fallback.type,
       cover: fallback.cover,
       tags: fallback.tags,
-      reason: "A quiet discovery from the Muse archive",
+      reason: "A quiet discovery from the public catalog",
       score: 1,
     };
   }

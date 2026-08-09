@@ -1,29 +1,22 @@
 "use client";
 
 /**
- * Unified Explore content provider — API-first public catalog.
+ * Unified Explore content provider — API-only public catalog.
  *
  * Priority:
- *   1. Open Library imported / discovery Works
- *   2. Other API sources (future TMDB / Spotify)
- *   3. CONTENT_CATALOG / editorial seed only when API has no data
+ *   1. Open Library books + TMDB movies + Last.fm music
+ *   2. imported-work-catalog (API-backed only)
  *
+ * Live surfaces never include CONTENT_CATALOG / editorial mock seeds.
  * Persists discovery into imported-work-catalog (public cache only —
  * never writes user-media-state / Library).
  */
 
-import {
-  CONTENT_CATALOG,
-  getContentById,
-} from "@/lib/content/content-data";
+import { getContentById } from "@/lib/content/content-data";
 import type { ExploreMood } from "@/lib/content/constants";
-import {
-  CURATED_LIST_DEFINITIONS,
-  CURATED_LISTS,
-} from "@/lib/content/curated-lists";
+import { CURATED_LIST_DEFINITIONS } from "@/lib/content/curated-lists";
 import {
   DISCOVERY_MODULE_COPY,
-  getDiscoverySections,
   type DiscoveryCategory,
   type DiscoveryModule,
   type ExploreDiscoveryItem,
@@ -33,7 +26,18 @@ import type {
   ContentSource,
   CuratedList,
 } from "@/lib/content/types";
-import { isRemoteCoverUrl, resolveCoverUrl } from "@/lib/work/cover-url";
+import { replaceDiscoveryItemWithWork } from "@/lib/explore/enrich-explore-seeds";
+import {
+  isRemoteCoverUrl,
+  normalizeWorkCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
+import { cleanDescription } from "@/lib/work/clean-description";
+import { isApiBackedSource } from "@/lib/work/content-layers";
+import {
+  filterDisplayableApiWorks,
+  isDisplayableApiWork,
+} from "@/lib/work/displayable-api-work";
 import {
   findImportedWorkByIdentity,
   findImportedWorkByTitle,
@@ -46,7 +50,36 @@ import {
   workIdentityKey,
   workTitleIdentityKey,
 } from "@/lib/work/work-identity";
-import type { ExternalRating, Work } from "@/types/work";
+import type { ExternalRating, Work, WorkType } from "@/types/work";
+
+/** Book subjects fetched to expand Explore coverage (≥20 displayable). */
+const BOOK_EXPAND_CATEGORIES = [
+  "classics",
+  "contemporary fiction",
+  "literary fiction",
+  "literature",
+  "romance",
+  "mystery",
+  "memoir",
+  "philosophy",
+] as const;
+
+/** TMDB genres / modes for Explore movie coverage. */
+const MOVIE_EXPAND_CATEGORIES = [
+  "drama",
+  "romance",
+  "science fiction",
+  "documentary",
+] as const;
+
+/** Last.fm tags for Explore music coverage. */
+const MUSIC_EXPAND_TAGS = [
+  "alternative",
+  "pop",
+  "indie",
+  "jazz",
+  "electronic",
+] as const;
 
 /** Canonical Explore card payload — always prefer coverUrl over gradients. */
 export type ExploreContentItem = {
@@ -64,11 +97,30 @@ export type ExploreContentItem = {
 
 export type ExploreCatalogMode = "api" | "fallback" | "loading";
 
+export type ExploreMovieSections = {
+  /** Sorted by releaseDate descending when available. */
+  recent: Work[];
+};
+
+export type ExploreMusicSections = {
+  /** Bootstrap / newly surfaced Last.fm works. */
+  recent: Work[];
+};
+
 export type ExploreApiFeed = {
+  /** Open Library book discovery (unchanged). */
   trending: Work[];
   popular: Work[];
   byMood: Record<ExploreMood, Work[]>;
   byCuratedCategory: Record<string, Work[]>;
+  /** TMDB movie discovery. */
+  trendingMovies: Work[];
+  popularMovies: Work[];
+  movieSections: ExploreMovieSections;
+  /** Last.fm music discovery. */
+  trendingMusic: Work[];
+  popularMusic: Work[];
+  musicSections: ExploreMusicSections;
 };
 
 export type ExploreDiscoverySection = {
@@ -95,6 +147,7 @@ function mapWorkSource(source: string | undefined): ContentSource {
   if (value === "google_books") return "google_books";
   if (value === "tmdb") return "tmdb";
   if (value === "spotify") return "spotify";
+  if (value === "lastfm") return "spotify"; // ContentSource has no lastfm yet
   if (value === "douban") return "douban";
   return "manual";
 }
@@ -140,26 +193,49 @@ export function preferApiWork(candidate: Work, existing?: Work): Work {
   };
 }
 
-/** Merge Works by title identity (handles EN/JA author mismatch). */
+/** Merge Works by title + type identity (handles EN/JA author mismatch). */
 export function mergeWorksByTitleIdentity(works: Work[]): Work[] {
   const byTitle = new Map<string, Work>();
 
   for (const work of works) {
-    const key =
+    const titleKey =
       workTitleIdentityKey(work.title) ||
       workIdentityKey(work.title, work.creator) ||
       work.id;
+    const key = `${work.type}:${titleKey}`;
     byTitle.set(key, preferApiWork(work, byTitle.get(key)));
   }
 
   return Array.from(byTitle.values());
 }
 
+/** Dedupe by provider id first, then title + type. */
 export function dedupeWorks(works: Work[]): Work[] {
-  return mergeWorksByTitleIdentity(works);
+  const byProvider = new Map<string, Work>();
+  const withoutProvider: Work[] = [];
+
+  for (const work of works) {
+    const source = work.source?.trim().toLowerCase() ?? "";
+    const externalId = work.externalId?.trim().toLowerCase() ?? "";
+    if (source && externalId) {
+      const key = `${source}:${externalId}`;
+      byProvider.set(key, preferApiWork(work, byProvider.get(key)));
+    } else {
+      withoutProvider.push(work);
+    }
+  }
+
+  return mergeWorksByTitleIdentity([
+    ...Array.from(byProvider.values()),
+    ...withoutProvider,
+  ]);
 }
 
-/** Work → Explore card contract (coverUrl preserved). */
+function onlyDisplayable(works: Work[]): Work[] {
+  return filterDisplayableApiWorks(dedupeWorks(works));
+}
+
+/** Work → Explore card contract (normalized coverUrl always present). */
 export function workToExploreContentItem(
   work: Work,
   extraTags: string[] = [],
@@ -178,12 +254,16 @@ export function workToExploreContentItem(
     ),
   );
 
+  const coverUrl = normalizeWorkCoverUrl(work.coverUrl, {
+    source: work.source,
+  });
+
   return {
     id: work.id,
     title: work.title,
     creator: work.creator,
-    coverUrl: work.coverUrl,
-    description: work.description,
+    coverUrl,
+    description: cleanDescription(work.description),
     source: work.source ?? "manual",
     type: toContentType(work.type),
     tags,
@@ -194,12 +274,15 @@ export function workToExploreContentItem(
 
 /** ExploreContentItem → existing Content UI shape (cover mirrors coverUrl). */
 export function exploreItemToContent(item: ExploreContentItem): Content {
+  const coverUrl = normalizeWorkCoverUrl(item.coverUrl, {
+    source: item.source,
+  });
   return {
     id: item.id,
     type: item.type ?? "BOOK",
     title: item.title,
     creator: item.creator,
-    cover: item.coverUrl,
+    cover: coverUrl,
     description: item.description,
     tags: item.tags ?? [],
     source: mapWorkSource(item.source),
@@ -248,15 +331,149 @@ async function fetchDiscoverWorks(
   }
 }
 
+/** TMDB movie search → Work[] (via /api/movies/search). */
+export async function fetchMovieSearchWorks(
+  query: string,
+  limit = 8,
+): Promise<Work[]> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+  });
+  try {
+    const response = await fetch(`/api/movies/search?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { items?: Work[] };
+    return Array.isArray(payload.items) ? payload.items : [];
+  } catch {
+    return [];
+  }
+}
+
+/** TMDB movie discovery → Work[] (via /api/movies/discover). */
+export async function fetchMovieDiscoverWorks(
+  mode:
+    | "trending"
+    | "popular"
+    | "category"
+    | "bootstrap"
+    | "top_rated"
+    | "now_playing",
+  options: { category?: string; limit?: number } = {},
+): Promise<Work[]> {
+  const params = new URLSearchParams({
+    mode,
+    limit: String(options.limit ?? 24),
+  });
+  if (options.category) params.set("category", options.category);
+
+  try {
+    const response = await fetch(`/api/movies/discover?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { items?: Work[] };
+    return Array.isArray(payload.items) ? payload.items : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Last.fm music search → Work[] (via /api/music/search). */
+export async function fetchMusicSearchWorks(
+  query: string,
+  limit = 8,
+): Promise<Work[]> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+  });
+  try {
+    const response = await fetch(`/api/music/search?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { items?: Work[] };
+    return Array.isArray(payload.items) ? payload.items : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Last.fm music discovery → Work[] (via /api/music/discover). */
+export async function fetchMusicDiscoverWorks(
+  mode: "trending" | "popular" | "bootstrap" | "category",
+  options: { category?: string; limit?: number } = {},
+): Promise<Work[]> {
+  const params = new URLSearchParams({
+    mode,
+    limit: String(options.limit ?? 24),
+  });
+  if (options.category) params.set("category", options.category);
+
+  try {
+    const response = await fetch(`/api/music/discover?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as { items?: Work[] };
+    return Array.isArray(payload.items) ? payload.items : [];
+  } catch {
+    return [];
+  }
+}
+
+function sortMoviesByReleaseDateDesc(works: Work[]): Work[] {
+  return [...works].sort((left, right) => {
+    const leftDate = left.releaseDate?.trim() ?? "";
+    const rightDate = right.releaseDate?.trim() ?? "";
+    if (leftDate && rightDate) return rightDate.localeCompare(leftDate);
+    if (rightDate) return 1;
+    if (leftDate) return -1;
+    return 0;
+  });
+}
+
+/** Prefer higher Last.fm listener / playcount for “recently discovered” ordering. */
+function sortMusicByPopularityDesc(works: Work[]): Work[] {
+  return [...works].sort((left, right) => {
+    const leftScore =
+      (typeof left.metadata?.listeners === "number"
+        ? left.metadata.listeners
+        : 0) +
+      (typeof left.metadata?.playcount === "number"
+        ? left.metadata.playcount / 1000
+        : 0);
+    const rightScore =
+      (typeof right.metadata?.listeners === "number"
+        ? right.metadata.listeners
+        : 0) +
+      (typeof right.metadata?.playcount === "number"
+        ? right.metadata.playcount / 1000
+        : 0);
+    return rightScore - leftScore;
+  });
+}
+
 /** Persist public catalog Works only — never writes User Library status. */
 export function persistPublicCatalogWorks(works: Work[]) {
   for (const work of works) {
     persistImportedWork(work);
   }
+  // Rewrite legacy catalog workIds in Journal / Library once API Works land.
+  if (typeof window !== "undefined" && works.length > 0) {
+    void import("@/lib/work/migrate-canonical-work-ids").then(
+      ({ migrateCanonicalWorkIds }) => {
+        migrateCanonicalWorkIds();
+      },
+    );
+  }
 }
 
 /**
- * Fetch Open Library discovery + seed searches; persist into imported-work-catalog.
+ * Fetch Open Library + TMDB + Last.fm discovery; persist into imported-work-catalog.
  */
 export async function loadExploreApiFeed(): Promise<ExploreApiFeed | null> {
   if (feedCache) return feedCache;
@@ -264,31 +481,138 @@ export async function loadExploreApiFeed(): Promise<ExploreApiFeed | null> {
 
   feedPromise = (async () => {
     try {
-      const [norwegian, littlePrince, kafka, bootstrap] = await Promise.all([
+      const [
+        norwegian,
+        interstellar,
+        blonde,
+        bootstrap,
+        trendingMoviesRaw,
+        popularMoviesRaw,
+        topRatedMoviesRaw,
+        nowPlayingMoviesRaw,
+        movieBootstrap,
+        trendingMusicRaw,
+        popularMusicRaw,
+        musicBootstrap,
+        bookCategoryBatches,
+        movieCategoryBatches,
+        musicTagBatches,
+      ] = await Promise.all([
         fetchSearchWorks("Norwegian Wood", 5),
-        fetchSearchWorks("The Little Prince", 4),
-        fetchSearchWorks("Kafka on the Shore", 4),
-        fetchDiscoverWorks("bootstrap", { limit: 24 }),
+        fetchMovieSearchWorks("Interstellar", 4),
+        fetchMusicSearchWorks("Blonde Frank Ocean", 4),
+        fetchDiscoverWorks("bootstrap", { limit: 28 }),
+        fetchMovieDiscoverWorks("trending", { limit: 24 }),
+        fetchMovieDiscoverWorks("popular", { limit: 24 }),
+        fetchMovieDiscoverWorks("top_rated", { limit: 20 }),
+        fetchMovieDiscoverWorks("now_playing", { limit: 20 }),
+        fetchMovieDiscoverWorks("bootstrap", { limit: 28 }),
+        fetchMusicDiscoverWorks("trending", { limit: 24 }),
+        fetchMusicDiscoverWorks("popular", { limit: 24 }),
+        fetchMusicDiscoverWorks("bootstrap", { limit: 28 }),
+        Promise.all(
+          BOOK_EXPAND_CATEGORIES.map((category) =>
+            fetchDiscoverWorks("category", { category, limit: 10 }),
+          ),
+        ),
+        Promise.all(
+          MOVIE_EXPAND_CATEGORIES.map((category) =>
+            fetchMovieDiscoverWorks("category", { category, limit: 10 }),
+          ),
+        ),
+        Promise.all(
+          MUSIC_EXPAND_TAGS.map((category) =>
+            fetchMusicDiscoverWorks("category", { category, limit: 10 }),
+          ),
+        ),
       ]);
 
-      const seed = dedupeWorks([
+      const expandedBooks = bookCategoryBatches.flat();
+      const expandedMovies = movieCategoryBatches.flat();
+      const expandedMusic = musicTagBatches.flat();
+
+      const seed = onlyDisplayable([
         ...norwegian,
-        ...littlePrince,
-        ...kafka,
         ...bootstrap,
+        ...expandedBooks,
       ]);
 
       if (seed.length > 0) {
         persistPublicCatalogWorks(seed);
       }
 
+      const moviePool = onlyDisplayable([
+        ...trendingMoviesRaw,
+        ...popularMoviesRaw,
+        ...topRatedMoviesRaw,
+        ...nowPlayingMoviesRaw,
+        ...movieBootstrap,
+        ...interstellar,
+        ...expandedMovies,
+      ]);
+
+      const trendingMovies = onlyDisplayable(
+        trendingMoviesRaw.length > 0 ? trendingMoviesRaw : moviePool,
+      );
+      const popularMovies = onlyDisplayable(
+        popularMoviesRaw.length > 0 ? popularMoviesRaw : moviePool,
+      );
+      const recentMovies = sortMoviesByReleaseDateDesc(
+        onlyDisplayable([
+          ...nowPlayingMoviesRaw,
+          ...popularMovies,
+          ...trendingMovies,
+          ...movieBootstrap,
+        ]),
+      ).slice(0, 16);
+
+      if (moviePool.length > 0) {
+        persistPublicCatalogWorks(moviePool);
+      }
+
+      const movieFeed = {
+        trendingMovies,
+        popularMovies,
+        movieSections: { recent: recentMovies },
+      };
+
+      const musicPool = onlyDisplayable([
+        ...trendingMusicRaw,
+        ...popularMusicRaw,
+        ...musicBootstrap,
+        ...blonde,
+        ...expandedMusic,
+      ]);
+
+      const trendingMusic = onlyDisplayable(
+        trendingMusicRaw.length > 0 ? trendingMusicRaw : musicPool,
+      );
+      const popularMusic = onlyDisplayable(
+        popularMusicRaw.length > 0 ? popularMusicRaw : musicPool,
+      );
+      const recentMusic = sortMusicByPopularityDesc(musicPool).slice(0, 16);
+
+      if (musicPool.length > 0) {
+        persistPublicCatalogWorks(musicPool);
+      }
+
+      const musicFeed = {
+        trendingMusic,
+        popularMusic,
+        musicSections: { recent: recentMusic },
+      };
+
       const [trendingRaw, popularRaw] = await Promise.all([
         fetchDiscoverWorks("trending", { limit: 24 }),
         fetchDiscoverWorks("popular", { limit: 24 }),
       ]);
 
-      let trending = trendingRaw.length > 0 ? trendingRaw : seed;
-      let popular = popularRaw.length > 0 ? popularRaw : seed;
+      let trending = onlyDisplayable(
+        trendingRaw.length > 0 ? trendingRaw : seed,
+      );
+      let popular = onlyDisplayable(
+        popularRaw.length > 0 ? popularRaw : seed,
+      );
 
       if (trending.length === 0 && popular.length === 0 && seed.length > 0) {
         trending = seed;
@@ -304,26 +628,32 @@ export async function loadExploreApiFeed(): Promise<ExploreApiFeed | null> {
 
       const moodWorks: Work[][] = [];
       for (const [, category] of moodEntries) {
-        const works = await fetchDiscoverWorks("category", {
-          category,
-          limit: 12,
-        });
+        const works = onlyDisplayable(
+          await fetchDiscoverWorks("category", {
+            category,
+            limit: 12,
+          }),
+        );
         moodWorks.push(works.length > 0 ? works : trending.slice(0, 12));
       }
 
       const curatedWorks: Work[][] = [];
       for (const category of curatedCategories) {
-        const works = await fetchDiscoverWorks("category", {
-          category,
-          limit: 10,
-        });
+        const works = onlyDisplayable(
+          await fetchDiscoverWorks("category", {
+            category,
+            limit: 10,
+          }),
+        );
         curatedWorks.push(works.length > 0 ? works : popular.slice(0, 8));
       }
 
-      const communityRaw = await fetchDiscoverWorks("category", {
-        category: COMMUNITY_BOOK_CATEGORY,
-        limit: 12,
-      });
+      const communityRaw = onlyDisplayable(
+        await fetchDiscoverWorks("category", {
+          category: COMMUNITY_BOOK_CATEGORY,
+          limit: 12,
+        }),
+      );
       const community =
         communityRaw.length > 0 ? communityRaw : popular.slice(0, 12);
 
@@ -339,7 +669,7 @@ export async function loadExploreApiFeed(): Promise<ExploreApiFeed | null> {
       });
       byCuratedCategory[COMMUNITY_BOOK_CATEGORY] = community;
 
-      const all = dedupeWorks([
+      const allBooks = onlyDisplayable([
         ...seed,
         ...trending,
         ...popular,
@@ -347,27 +677,47 @@ export async function loadExploreApiFeed(): Promise<ExploreApiFeed | null> {
         ...Object.values(byCuratedCategory).flat(),
       ]);
 
-      if (all.length === 0) {
+      const hasMovies =
+        movieFeed.trendingMovies.length > 0 ||
+        movieFeed.popularMovies.length > 0 ||
+        movieFeed.movieSections.recent.length > 0;
+      const hasMusic =
+        musicFeed.trendingMusic.length > 0 ||
+        musicFeed.popularMusic.length > 0 ||
+        musicFeed.musicSections.recent.length > 0;
+
+      if (allBooks.length === 0 && !hasMovies && !hasMusic) {
         feedCache = null;
         return null;
       }
 
-      persistPublicCatalogWorks(all);
+      if (allBooks.length > 0) {
+        persistPublicCatalogWorks(allBooks);
+      }
+
       const feed: ExploreApiFeed = {
-        trending: mergeWorksByTitleIdentity(trending),
-        popular: mergeWorksByTitleIdentity(popular),
-        byMood: {
-          quiet: mergeWorksByTitleIdentity(byMood.quiet),
-          nostalgic: mergeWorksByTitleIdentity(byMood.nostalgic),
-          curious: mergeWorksByTitleIdentity(byMood.curious),
-        },
-        byCuratedCategory: Object.fromEntries(
-          Object.entries(byCuratedCategory).map(([key, works]) => [
-            key,
-            mergeWorksByTitleIdentity(works),
-          ]),
-        ),
+        trending,
+        popular,
+        byMood,
+        byCuratedCategory,
+        trendingMovies: movieFeed.trendingMovies,
+        popularMovies: movieFeed.popularMovies,
+        movieSections: movieFeed.movieSections,
+        trendingMusic: musicFeed.trendingMusic,
+        popularMusic: musicFeed.popularMusic,
+        musicSections: musicFeed.musicSections,
       };
+
+      if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+        const counts = {
+          book: allBooks.length,
+          movie: moviePool.length,
+          music: musicPool.length,
+        };
+        // eslint-disable-next-line no-console
+        console.info("[explore:api-catalog]", counts);
+      }
+
       feedCache = feed;
       return feed;
     } catch {
@@ -385,7 +735,7 @@ export function getExploreApiFeedCache(): ExploreApiFeed | null | undefined {
   return feedCache;
 }
 
-/** Merge discovery feed + imported catalog (Open Library first). */
+/** Merge discovery feed + imported catalog (books + movies + music). */
 export function collectApiWorks(
   feed: ExploreApiFeed | null,
   imported: Work[] = listImportedWorks(),
@@ -396,18 +746,29 @@ export function collectApiWorks(
         ...feed.popular,
         ...Object.values(feed.byMood).flat(),
         ...Object.values(feed.byCuratedCategory).flat(),
+        ...(feed.trendingMovies ?? []),
+        ...(feed.popularMovies ?? []),
+        ...(feed.movieSections?.recent ?? []),
+        ...(feed.trendingMusic ?? []),
+        ...(feed.popularMusic ?? []),
+        ...(feed.musicSections?.recent ?? []),
       ]
     : [];
 
-  return mergeWorksByTitleIdentity([
+  return onlyDisplayable([
     ...fromFeed,
-    ...imported.filter((work) => work.type === "book"),
+    ...imported.filter(
+      (work) =>
+        work.type === "book" ||
+        work.type === "movie" ||
+        work.type === "music",
+    ),
   ]);
 }
 
 /**
- * Build Explore grid items.
- * Priority: open_library → other API → user library → CONTENT_CATALOG fallback.
+ * Build Explore grid items — displayable API Works only.
+ * User-library titles appear only when they resolve to displayable API Works.
  */
 export function buildExploreContentItems(
   apiWorks: Work[],
@@ -417,12 +778,12 @@ export function buildExploreContentItems(
   } = {},
 ): ExploreContentItem[] {
   const { moodTagsByWorkId = new Map(), userLibraryWorks = [] } = options;
-  const works = mergeWorksByTitleIdentity(apiWorks);
+  const works = onlyDisplayable(apiWorks);
   const byTitle = new Map<string, ExploreContentItem>();
   const order: string[] = [];
 
   const put = (item: ExploreContentItem, force = false) => {
-    const key = workTitleIdentityKey(item.title) || item.id;
+    const key = `${item.type ?? "BOOK"}:${workTitleIdentityKey(item.title) || item.id}`;
     const existing = byTitle.get(key);
     if (!existing) {
       byTitle.set(key, item);
@@ -455,7 +816,6 @@ export function buildExploreContentItems(
     });
   };
 
-  // 1) Open Library / API public catalog
   for (const work of works) {
     put(
       workToExploreContentItem(work, moodTagsByWorkId.get(work.id) ?? []),
@@ -463,42 +823,10 @@ export function buildExploreContentItems(
     );
   }
 
-  // 2) User library titles not already covered
-  for (const work of userLibraryWorks) {
-    const key = workTitleIdentityKey(work.title) || work.id;
+  for (const work of onlyDisplayable(userLibraryWorks)) {
+    const key = `${work.type}:${workTitleIdentityKey(work.title) || work.id}`;
     if (byTitle.has(key)) continue;
     put(workToExploreContentItem(work, moodTagsByWorkId.get(work.id) ?? []));
-  }
-
-  // 3) CONTENT_CATALOG only for titles with no API twin
-  for (const content of CONTENT_CATALOG) {
-    const key = workTitleIdentityKey(content.title) || content.id;
-    if (byTitle.has(key)) continue;
-    // When API books exist, skip mock books — keep film/music placeholders.
-    if (works.length > 0 && content.type === "BOOK") continue;
-    put({
-      id: content.id,
-      title: content.title,
-      creator: content.creator,
-      coverUrl: content.cover,
-      description: content.description,
-      source: content.source,
-      type: content.type,
-      tags: content.tags,
-    });
-  }
-
-  if (byTitle.size === 0) {
-    return CONTENT_CATALOG.map((content) => ({
-      id: content.id,
-      title: content.title,
-      creator: content.creator,
-      coverUrl: content.cover,
-      description: content.description,
-      source: content.source,
-      type: content.type,
-      tags: content.tags,
-    }));
   }
 
   return order.map((key) => byTitle.get(key)!).filter(Boolean);
@@ -530,6 +858,12 @@ export function buildMoodTagMap(feed: ExploreApiFeed): Map<string, string[]> {
   add(feed.byMood.curious, ["curious", "dreamlike", "surreal", "mysterious"]);
   add(feed.trending, ["curious"]);
   add(feed.popular, ["quiet"]);
+  add(feed.trendingMovies ?? [], ["curious", "cinematic"]);
+  add(feed.popularMovies ?? [], ["quiet", "cinematic"]);
+  add(feed.movieSections?.recent ?? [], ["curious"]);
+  add(feed.trendingMusic ?? [], ["curious", "melancholy"]);
+  add(feed.popularMusic ?? [], ["quiet", "nostalgic"]);
+  add(feed.musicSections?.recent ?? [], ["curious"]);
 
   return map;
 }
@@ -540,12 +874,15 @@ export function workToDiscoveryItem(
   module: DiscoveryModule,
   reason: string,
 ): ExploreDiscoveryItem {
+  const coverUrl = normalizeWorkCoverUrl(work.coverUrl, {
+    source: work.source,
+  });
   return {
     id: `api-${module}-${work.id}`,
     title: work.title,
     creator: work.creator,
-    cover: work.coverUrl,
-    coverUrl: work.coverUrl,
+    cover: coverUrl,
+    coverUrl,
     category,
     source: "catalog",
     workSource: work.source ?? "open_library",
@@ -555,47 +892,83 @@ export function workToDiscoveryItem(
   };
 }
 
+function discoveryItemWorkType(item: ExploreDiscoveryItem): WorkType {
+  if (item.category === "film") return "movie";
+  if (item.category === "music") return "music";
+  return "book";
+}
+
+function findImportedForDiscoveryItem(
+  item: ExploreDiscoveryItem,
+): Work | null {
+  const expectedType = discoveryItemWorkType(item);
+  const candidates = [
+    item.contentId ? getImportedWorkById(item.contentId) : null,
+    findImportedWorkByIdentity(item.title, item.creator),
+    findImportedWorkByTitle(item.title),
+  ].filter((work): work is Work => Boolean(work));
+
+  const typed = candidates.find(
+    (work) =>
+      work.type === expectedType &&
+      isApiBackedSource(work.source) &&
+      isRemoteCoverUrl(work.coverUrl),
+  );
+  if (typed) return typed;
+
+  return (
+    candidates.find(
+      (work) =>
+        work.type === expectedType && isApiBackedSource(work.source),
+    ) ?? null
+  );
+}
+
+/**
+ * Canonical discovery enrichment:
+ * API / imported Work → editorial seed fallback.
+ * Never replaces a remote cover with a gradient.
+ */
 export function enrichDiscoveryItem(
   item: ExploreDiscoveryItem,
 ): ExploreDiscoveryItem {
-  const imported =
-    (item.contentId ? getImportedWorkById(item.contentId) : null) ??
-    findImportedWorkByIdentity(item.title, item.creator) ??
-    findImportedWorkByTitle(item.title);
+  const imported = findImportedForDiscoveryItem(item);
+  if (imported) {
+    return replaceDiscoveryItemWithWork(item, imported);
+  }
 
-  if (!imported) return item;
-
-  const coverUrl = resolveCoverUrl(imported.coverUrl, item.coverUrl, item.cover);
-
+  const coverUrl = normalizeWorkCoverUrl(
+    resolveCoverUrl(item.coverUrl, item.cover),
+    { source: item.workSource },
+  );
   return {
     ...item,
     cover: coverUrl,
     coverUrl,
-    contentId: imported.id,
-    creator: imported.creator || item.creator,
-    reason: imported.description.trim() || item.reason,
-    source: "catalog",
-    workSource: imported.source ?? item.workSource ?? "open_library",
   };
 }
 
-/** Book discovery — API/imported only; never editorial mock when data exists. */
+/** Book discovery — displayable Open Library Works only. */
 export function buildBookDiscoverySections(
   feed: ExploreApiFeed | null,
   importedBooks: Work[],
 ): ExploreDiscoverySection[] {
   const copy = DISCOVERY_MODULE_COPY.book;
+  const trending = onlyDisplayable(feed?.trending ?? []);
+  const popular = onlyDisplayable(feed?.popular ?? []);
+  const imported = onlyDisplayable(importedBooks);
 
-  if (feed && (feed.trending.length > 0 || feed.popular.length > 0)) {
-    const community =
-      feed.byCuratedCategory[COMMUNITY_BOOK_CATEGORY] ?? feed.popular;
+  if (trending.length > 0 || popular.length > 0) {
+    const community = onlyDisplayable(
+      feed?.byCuratedCategory[COMMUNITY_BOOK_CATEGORY] ?? popular,
+    );
 
     return (
       [
         {
           module: "trending" as const,
           ...copy.trending,
-          items: feed.trending.slice(0, 12).map((work) =>
+          items: trending.slice(0, 12).map((work) =>
             workToDiscoveryItem(
               work,
               "book",
@@ -607,7 +980,7 @@ export function buildBookDiscoverySections(
         {
           module: "new_release" as const,
           ...copy.new_release,
-          items: feed.popular.slice(0, 12).map((work) =>
+          items: popular.slice(0, 12).map((work) =>
             workToDiscoveryItem(
               work,
               "book",
@@ -632,13 +1005,13 @@ export function buildBookDiscoverySections(
     ).filter((section) => section.items.length > 0);
   }
 
-  if (importedBooks.length === 0) return [];
+  if (imported.length === 0) return [];
 
   return [
     {
       module: "trending",
       ...copy.trending,
-      items: importedBooks.slice(0, 12).map((work) =>
+      items: imported.slice(0, 12).map((work) =>
         workToDiscoveryItem(
           work,
           "book",
@@ -650,7 +1023,7 @@ export function buildBookDiscoverySections(
     {
       module: "new_release",
       ...copy.new_release,
-      items: importedBooks.slice(0, 12).map((work) =>
+      items: imported.slice(0, 12).map((work) =>
         workToDiscoveryItem(
           work,
           "book",
@@ -662,7 +1035,7 @@ export function buildBookDiscoverySections(
     {
       module: "community",
       ...copy.community,
-      items: importedBooks.slice(0, 12).map((work) =>
+      items: imported.slice(0, 12).map((work) =>
         workToDiscoveryItem(
           work,
           "book",
@@ -674,90 +1047,250 @@ export function buildBookDiscoverySections(
   ];
 }
 
-/** Film / music (no provider yet) — editorial seed, enriched when possible. */
-export function buildEditorialDiscoverySections(
-  category: DiscoveryCategory,
+/** Film discovery — displayable TMDB Works only. */
+export function buildFilmDiscoverySections(
+  feed: ExploreApiFeed | null,
+  importedMovies: Work[] = [],
 ): ExploreDiscoverySection[] {
-  return getDiscoverySections(category).map((section) => ({
-    ...section,
-    items: section.items.map(enrichDiscoveryItem),
-  }));
+  const imported = onlyDisplayable(importedMovies);
+  const trending = onlyDisplayable(
+    feed?.trendingMovies?.length
+      ? feed.trendingMovies
+      : imported.filter((work) => work.source === "tmdb"),
+  );
+  const popular = onlyDisplayable(
+    feed?.popularMovies?.length
+      ? feed.popularMovies
+      : imported.filter((work) => work.type === "movie"),
+  );
+  const recent = onlyDisplayable(
+    feed?.movieSections?.recent?.length
+      ? feed.movieSections.recent
+      : sortMoviesByReleaseDateDesc(popular),
+  );
+
+  if (trending.length === 0 && popular.length === 0 && recent.length === 0) {
+    return [];
+  }
+
+  const toItem = (
+    work: Work,
+    module: DiscoveryModule,
+    fallbackReason: string,
+  ) => {
+    const rating = work.externalRatings?.[0];
+    const ratingHint =
+      rating != null
+        ? `TMDB ${Math.round(rating.value * 10) / 10}/${rating.scale}`
+        : "";
+    const reason =
+      work.description.trim() ||
+      [fallbackReason, ratingHint].filter(Boolean).join(" · ");
+
+    return workToDiscoveryItem(work, "film", module, reason);
+  };
+
+  return (
+    [
+      {
+        module: "trending" as const,
+        title: "Trending Movies",
+        description: "Films rising across TMDB this week",
+        items: trending
+          .slice(0, 12)
+          .map((work) =>
+            toItem(work, "trending", "Trending on TMDB."),
+          ),
+      },
+      {
+        module: "new_release" as const,
+        title: "Popular Movies",
+        description: "Widely watched titles with lasting cultural pull",
+        items: popular
+          .slice(0, 12)
+          .map((work) =>
+            toItem(work, "new_release", "Popular on TMDB."),
+          ),
+      },
+      {
+        module: "community" as const,
+        title: "Recently Released",
+        description: "Newer releases worth catching up on",
+        items: recent
+          .slice(0, 12)
+          .map((work) =>
+            toItem(
+              work,
+              "community",
+              work.releaseDate
+                ? `Released ${work.releaseDate}.`
+                : "Recent on TMDB.",
+            ),
+          ),
+      },
+    ] as ExploreDiscoverySection[]
+  ).filter((section) => section.items.length > 0);
+}
+
+/** Music discovery — displayable Last.fm Works only. */
+export function buildMusicDiscoverySections(
+  feed: ExploreApiFeed | null,
+  importedMusic: Work[] = [],
+): ExploreDiscoverySection[] {
+  const imported = onlyDisplayable(importedMusic);
+  const trending = onlyDisplayable(
+    feed?.trendingMusic?.length
+      ? feed.trendingMusic
+      : imported.filter((work) => work.source === "lastfm"),
+  );
+  const popular = onlyDisplayable(
+    feed?.popularMusic?.length
+      ? feed.popularMusic
+      : imported.filter((work) => work.type === "music"),
+  );
+  const recent = onlyDisplayable(
+    feed?.musicSections?.recent?.length
+      ? feed.musicSections.recent
+      : sortMusicByPopularityDesc(popular),
+  );
+
+  if (trending.length === 0 && popular.length === 0 && recent.length === 0) {
+    return [];
+  }
+
+  const toItem = (
+    work: Work,
+    module: DiscoveryModule,
+    fallbackReason: string,
+  ) => {
+    const listeners =
+      typeof work.metadata?.listeners === "number"
+        ? work.metadata.listeners
+        : null;
+    const listenerHint =
+      listeners != null && listeners > 0
+        ? `${listeners.toLocaleString()} listeners`
+        : "";
+    const reason =
+      work.description.trim() ||
+      [fallbackReason, listenerHint].filter(Boolean).join(" · ");
+
+    return workToDiscoveryItem(work, "music", module, reason);
+  };
+
+  return (
+    [
+      {
+        module: "trending" as const,
+        title: "Trending Music",
+        description: "Tracks and albums rising on Last.fm",
+        items: trending
+          .slice(0, 12)
+          .map((work) =>
+            toItem(work, "trending", "Trending on Last.fm."),
+          ),
+      },
+      {
+        module: "new_release" as const,
+        title: "Popular Music",
+        description: "Widely loved records with lasting pull",
+        items: popular
+          .slice(0, 12)
+          .map((work) =>
+            toItem(work, "new_release", "Popular on Last.fm."),
+          ),
+      },
+      {
+        module: "community" as const,
+        title: "Recently Discovered",
+        description: "Fresh finds surfacing in the public catalog",
+        items: recent
+          .slice(0, 12)
+          .map((work) =>
+            toItem(work, "community", "Discovered on Last.fm."),
+          ),
+      },
+    ] as ExploreDiscoverySection[]
+  ).filter((section) => section.items.length > 0);
+}
+
+/**
+ * Editorial seed fallback — disabled on live surfaces.
+ * Kept as an empty adapter so callers do not crash; returns [].
+ */
+export function buildEditorialDiscoverySections(
+  _category: DiscoveryCategory,
+): ExploreDiscoverySection[] {
+  return [];
 }
 
 export function buildCuratedListsFromFeed(
   feed: ExploreApiFeed | null,
   importedBooks: Work[],
 ): CuratedList[] {
-  if (feed) {
-    return CURATED_LIST_DEFINITIONS.map((def) => {
-      const works = feed.byCuratedCategory[def.apiCategory] ?? [];
-      if (works.length === 0 && importedBooks.length === 0) {
-        return {
-          id: def.id,
-          title: def.title,
-          creator: def.creator,
-          description: def.description,
-          cover: def.cover,
-          items: def.fallbackItems,
-        };
-      }
+  const displayableImported = onlyDisplayable(importedBooks);
 
+  if (feed) {
+    return CURATED_LIST_DEFINITIONS.flatMap((def) => {
+      const works = onlyDisplayable(
+        feed.byCuratedCategory[def.apiCategory] ?? [],
+      );
       const slice =
         works.length > 0
           ? works.slice(0, 8)
-          : importedBooks.slice(0, 8);
+          : displayableImported.slice(0, 8);
+      if (slice.length === 0) return [];
 
-      return {
-        id: def.id,
-        title: def.title,
-        creator: def.creator,
-        description: def.description,
-        cover: resolveCoverUrl(slice[0]?.coverUrl, def.cover),
-        items: slice.map((work) => work.id),
-      };
-    });
-  }
-
-  if (importedBooks.length > 0) {
-    return CURATED_LIST_DEFINITIONS.map((def, index) => {
-      const slice = importedBooks.slice(index * 3, index * 3 + 8);
-      if (slice.length === 0) {
-        // Reuse pool rather than mock catalog ids when API imports exist.
-        const fallbackSlice = importedBooks.slice(0, 8);
-        return {
+      return [
+        {
           id: def.id,
           title: def.title,
           creator: def.creator,
           description: def.description,
-          cover: resolveCoverUrl(fallbackSlice[0]?.coverUrl, def.cover),
-          items: fallbackSlice.map((work) => work.id),
-        };
-      }
-      return {
-        id: def.id,
-        title: def.title,
-        creator: def.creator,
-        description: def.description,
-        cover: resolveCoverUrl(slice[0]?.coverUrl, def.cover),
-        items: slice.map((work) => work.id),
-      };
+          cover: resolveCoverUrl(slice[0]?.coverUrl, def.cover),
+          items: slice.map((work) => work.id),
+        },
+      ];
     });
   }
 
-  return CURATED_LISTS;
+  if (displayableImported.length > 0) {
+    return CURATED_LIST_DEFINITIONS.flatMap((def, index) => {
+      const slice = displayableImported.slice(index * 3, index * 3 + 8);
+      const pool = slice.length > 0 ? slice : displayableImported.slice(0, 8);
+      if (pool.length === 0) return [];
+      return [
+        {
+          id: def.id,
+          title: def.title,
+          creator: def.creator,
+          description: def.description,
+          cover: resolveCoverUrl(pool[0]?.coverUrl, def.cover),
+          items: pool.map((work) => work.id),
+        },
+      ];
+    });
+  }
+
+  return [];
 }
 
 export function resolveExploreContentById(id: string): Content | null {
   const imported = getImportedWorkById(id);
-  if (imported) return workToExploreContent(imported);
+  if (imported && isDisplayableApiWork(imported)) {
+    return workToExploreContent(imported);
+  }
 
   const catalog = getContentById(id);
   if (!catalog) return null;
 
   const byTitle = findImportedWorkByTitle(catalog.title);
-  if (byTitle) return workToExploreContent(byTitle);
+  if (byTitle && isDisplayableApiWork(byTitle)) {
+    return workToExploreContent(byTitle);
+  }
 
-  return catalog;
+  // Never surface mock catalog ids on live Explore surfaces.
+  return null;
 }
 
 export function resolveExploreContentsByIds(ids: string[]): Content[] {

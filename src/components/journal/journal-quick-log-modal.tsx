@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ImageIcon } from "lucide-react";
 
 import { JournalMediaSearch } from "@/components/calendar/journal-media-search";
@@ -19,7 +19,6 @@ import {
   buildJournalItemFromMediaKey,
   getContentByMediaKey,
   mediaKeyFromJournalItemId,
-  resolveJournalItemId,
 } from "@/lib/content/bubble-content-bridge";
 import { getContentById } from "@/lib/content/content-data";
 import type { MediaSearchResult } from "@/lib/content/search";
@@ -110,22 +109,32 @@ function activityIdFromMoment(
   return match?.id ?? activities[0]?.id ?? "started_reading";
 }
 
+type JournalQuickLogFormProps = {
+  workIdProp: string;
+  onClose: () => void;
+  snapshot: WorkPreviewSnapshot | null;
+  initialDate?: string;
+  entryId?: string;
+  existing: MediaItem | null;
+  lockScroll: boolean;
+  zIndex: number;
+};
+
 /**
- * Quick Memory — cultural moment editor (dates + reflection, not duration).
+ * Form body keyed by memory identity so useState initializes from `existing`
+ * without syncing via useEffect setState.
  */
-export function JournalQuickLogModal({
-  workId: workIdProp,
+function JournalQuickLogForm({
+  workIdProp,
   onClose,
-  snapshot = null,
+  snapshot,
   initialDate,
   entryId,
-  lockScroll = false,
-  zIndex = 74,
-}: JournalQuickLogModalProps) {
-  const { entries, addEntry } = useJournalEntries();
-  const existing = entryId
-    ? (entries.find((item) => item.id === entryId) ?? null)
-    : null;
+  existing,
+  lockScroll,
+  zIndex,
+}: JournalQuickLogFormProps) {
+  const { addEntry } = useJournalEntries();
   const isEditing = Boolean(entryId);
 
   const [selectedWorkId, setSelectedWorkId] = useState(
@@ -181,32 +190,25 @@ export function JournalQuickLogModal({
     catalog?.cover,
   );
 
-  const activities = useMemo(() => activitiesForType(type), [type]);
+  const activities = activitiesForType(type);
   const today = getDisplayTodayString();
   const seedDate =
     normalizeCalendarDate(initialDate) ??
     (existing ? getJourneyStart(existing) : null) ??
     today;
 
-  const [startDate, setStartDate] = useState(seedDate);
+  const [startDate, setStartDate] = useState(
+    existing ? getJourneyStart(existing) : seedDate,
+  );
   const [endDate, setEndDate] = useState(
     existing ? getJourneyEnd(existing) : seedDate,
   );
-  const [activityId, setActivityId] = useState(
-    activityIdFromMoment(existing?.moment, activities),
+  const [activityId, setActivityId] = useState(() =>
+    activityIdFromMoment(existing?.moment, activitiesForType(type)),
   );
   const [moodTags, setMoodTags] = useState<string[]>(existing?.tags ?? []);
   const [note, setNote] = useState(existing?.note ?? existing?.notes ?? "");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!existing) return;
-    setStartDate(getJourneyStart(existing));
-    setEndDate(getJourneyEnd(existing));
-    setMoodTags(existing.tags ?? []);
-    setNote(existing.note ?? existing.notes ?? "");
-    setActivityId(activityIdFromMoment(existing.moment, activities));
-  }, [existing, activities]);
 
   const selectedActivity =
     activities.find((item) => item.id === activityId) ?? activities[0];
@@ -238,7 +240,7 @@ export function JournalQuickLogModal({
 
     const mediaStatus = selectedActivity.mediaStatus;
     const trimmedNote = note.trim();
-    let nextStart = normalizedStart;
+    const nextStart = normalizedStart;
     let nextEnd = normalizedEnd;
     if (nextEnd < nextStart) nextEnd = nextStart;
 
@@ -301,10 +303,11 @@ export function JournalQuickLogModal({
       },
     );
 
-    entry.id = resolveJournalItemId(resolvedId);
+    // buildJournalItemFromMediaKey already persists canonical API workId.
+    const canonicalMediaKey = mediaKeyFromJournalItemId(entry.id);
     addEntry(entry);
 
-    upsertUserMediaState(resolvedId, {
+    upsertUserMediaState(canonicalMediaKey, {
       status: mediaStatus === "FINISHED" ? "FINISHED" : "ONGOING",
       startDate: nextStart,
       endDate: nextEnd,
@@ -313,7 +316,7 @@ export function JournalQuickLogModal({
       shortReview: trimmedNote || undefined,
       title,
       creator,
-      cover,
+      cover: entry.cover,
       mediaType: type,
     });
 
@@ -471,5 +474,43 @@ export function JournalQuickLogModal({
         </div>
       </div>
     </LibraryPanelShell>
+  );
+}
+
+/**
+ * Quick Memory — cultural moment editor (dates + reflection, not duration).
+ */
+export function JournalQuickLogModal({
+  workId: workIdProp,
+  onClose,
+  snapshot = null,
+  initialDate,
+  entryId,
+  lockScroll = false,
+  zIndex = 74,
+}: JournalQuickLogModalProps) {
+  const { entries } = useJournalEntries();
+  const existing = entryId
+    ? (entries.find((item) => item.id === entryId) ?? null)
+    : null;
+
+  // Remount form when the edited memory identity changes so state
+  // initializes from `existing` without syncing setState in effects.
+  const formKey =
+    existing?.id ??
+    `new:${workIdProp || "search"}:${initialDate ?? "today"}`;
+
+  return (
+    <JournalQuickLogForm
+      key={formKey}
+      workIdProp={workIdProp}
+      onClose={onClose}
+      snapshot={snapshot}
+      initialDate={initialDate}
+      entryId={entryId}
+      existing={existing}
+      lockScroll={lockScroll}
+      zIndex={zIndex}
+    />
   );
 }

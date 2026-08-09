@@ -20,9 +20,15 @@ export interface WorkEnrichmentSimilarWork {
 
 export interface WorkEnrichment {
   summary?: string;
+  /** Provider-grounded “what to expect” line. */
+  whatToExpect?: string;
+  /** Concise guide from known metadata only. */
+  guide?: string;
   themes?: string[];
+  /** @deprecated Unsupported emotional scores — omit on new enrichments. */
   moodProfile?: WorkMoodProfile;
   culturalContext?: string;
+  /** @deprecated Invented similar works — omit unless catalog-backed. */
   similarWorks?: WorkEnrichmentSimilarWork[];
   editorialTags?: string[];
 }

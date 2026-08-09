@@ -3,7 +3,10 @@
 import { useSyncExternalStore } from "react";
 
 import { getContentById } from "@/lib/content/content-data";
-import { isRemoteCoverUrl } from "@/lib/work/cover-url";
+import {
+  isRemoteCoverUrl,
+  withNormalizedCoverUrl,
+} from "@/lib/work/cover-url";
 import {
   normalizeIdentityText,
   workIdentityKey,
@@ -36,16 +39,37 @@ function read(): Record<string, Work> {
   }
 }
 
+function hydrateRecord(record: Record<string, Work>): {
+  next: Record<string, Work>;
+  changed: boolean;
+} {
+  let changed = false;
+  const next: Record<string, Work> = {};
+  for (const [id, work] of Object.entries(record)) {
+    if (!work || typeof work !== "object") continue;
+    const hydrated = withNormalizedCoverUrl(work);
+    next[id] = hydrated;
+    if (hydrated.coverUrl !== work.coverUrl) changed = true;
+  }
+  return { next, changed };
+}
+
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
-  cached = read();
+  const { next, changed } = hydrateRecord(read());
+  cached = next;
   initialized = true;
+  // Persist normalized coverUrl so Library / Journal / Calendar stay in sync.
+  if (changed) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
+  }
 }
 
 function write(next: Record<string, Work>) {
-  cached = next;
+  const { next: hydrated } = hydrateRecord(next);
+  cached = hydrated;
   initialized = true;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cached));
   window.dispatchEvent(new CustomEvent("muselog-imported-works-updated"));
 }
 
@@ -53,7 +77,8 @@ function subscribe(cb: () => void) {
   if (typeof window === "undefined") return () => {};
   ensureInit();
   const handler = () => {
-    cached = read();
+    const { next } = hydrateRecord(read());
+    cached = next;
     initialized = true;
     cb();
   };
@@ -66,13 +91,16 @@ function subscribe(cb: () => void) {
 export function persistImportedWork(work: Work): Work {
   ensureInit();
   const previous = cached[work.id];
-  // Keep a previously saved remote cover if a later search omits cover_i.
-  const coverUrl =
-    isRemoteCoverUrl(work.coverUrl)
-      ? work.coverUrl
-      : isRemoteCoverUrl(previous?.coverUrl)
-        ? previous!.coverUrl
-        : work.coverUrl;
+  const incoming = withNormalizedCoverUrl(work);
+  const previousCover = previous
+    ? withNormalizedCoverUrl(previous).coverUrl
+    : "";
+  // Keep a previously saved remote cover if a later search omits artwork.
+  const coverUrl = isRemoteCoverUrl(incoming.coverUrl)
+    ? incoming.coverUrl
+    : isRemoteCoverUrl(previousCover)
+      ? previousCover
+      : incoming.coverUrl;
   const description =
     work.description.trim() || previous?.description?.trim() || "";
   const externalRatings =
@@ -83,7 +111,7 @@ export function persistImportedWork(work: Work): Work {
     ...(previous?.metadata ?? {}),
     ...(work.metadata ?? {}),
   };
-  const next: Work = {
+  const next: Work = withNormalizedCoverUrl({
     ...work,
     coverUrl,
     description,
@@ -91,7 +119,7 @@ export function persistImportedWork(work: Work): Work {
     metadata: Object.keys(metadata).length > 0 ? metadata : work.metadata,
     externalId: work.externalId ?? previous?.externalId,
     source: work.source ?? previous?.source,
-  };
+  });
   write({ ...cached, [work.id]: next });
   return next;
 }
@@ -146,14 +174,39 @@ export function findImportedWorkByTitle(title: string): Work | null {
  */
 export function getImportedWorkById(id: string): Work | null {
   ensureInit();
-  if (cached[id]) return cached[id]!;
+  if (cached[id]) return withNormalizedCoverUrl(cached[id]!);
 
   const catalog = getContentById(id);
   if (!catalog) return null;
-  return (
+  const matched =
     findImportedWorkByIdentity(catalog.title, catalog.creator) ??
-    findImportedWorkByTitle(catalog.title)
-  );
+    findImportedWorkByTitle(catalog.title);
+  return matched ? withNormalizedCoverUrl(matched) : null;
+}
+
+/**
+ * Canonical import resolver used by Explore / Journal / Calendar.
+ * Order: id → title+creator → title.
+ */
+export function resolveImportedWork(
+  workId: string,
+  title?: string,
+  creator?: string,
+): Work | null {
+  const byId = workId.trim() ? getImportedWorkById(workId.trim()) : null;
+  if (byId) return byId;
+
+  if (title?.trim() && creator?.trim()) {
+    const byIdentity = findImportedWorkByIdentity(title, creator);
+    if (byIdentity) return withNormalizedCoverUrl(byIdentity);
+  }
+
+  if (title?.trim()) {
+    const byTitle = findImportedWorkByTitle(title);
+    return byTitle ? withNormalizedCoverUrl(byTitle) : null;
+  }
+
+  return null;
 }
 
 export function getImportedWorkByExternalId(
@@ -170,7 +223,7 @@ export function getImportedWorkByExternalId(
 
 export function listImportedWorks(): Work[] {
   ensureInit();
-  return Object.values(cached);
+  return Object.values(cached).map((work) => withNormalizedCoverUrl(work));
 }
 
 export function removeImportedWork(id: string) {

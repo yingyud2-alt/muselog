@@ -1,16 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
-import {
-  aiPicks,
-  continueExploring,
-  readingStats,
-} from "@/components/dashboard/mock-data";
-import { CONTENT_CATALOG } from "@/lib/content/content-data";
+import type { AiPickItem } from "@/components/dashboard/mock-data";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getUserContentById } from "@/lib/content/user-content-store";
-import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import { buildAiReflectionInput } from "@/lib/ai/build-ai-reflection-input";
 import { sortLibraryItems } from "@/lib/library/library-items";
 import { useLibraryItems } from "@/lib/library/use-library-items";
@@ -20,6 +14,18 @@ import {
 } from "@/lib/profile/profile-utils";
 import { useReflectionData } from "@/lib/reflection/use-reflection-data";
 import type { ReflectionJourneyEntry } from "@/lib/reflection/reflection-types";
+import {
+  filterDisplayableApiWorks,
+  isDisplayableApiWork,
+  isDisplayableJournalEntry,
+} from "@/lib/work/displayable-api-work";
+import {
+  logCanonicalWorkVerification,
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+} from "@/lib/work/resolve-canonical-work";
+import { useImportedWorkMap } from "@/lib/work/imported-work-catalog";
+import type { Work } from "@/types/work";
 
 export type DashboardTimelineEntry = ReflectionJourneyEntry & {
   dayOfMonth: number;
@@ -27,51 +33,57 @@ export type DashboardTimelineEntry = ReflectionJourneyEntry & {
   exploreHref?: string;
 };
 
-const MOCK_MOODS = ["quiet", "nostalgic", "reflective"];
-
-const MOCK_REFLECTION_SUMMARY =
-  "Your recent journey shows a preference for quiet stories, human relationships, and memory.";
-
-const MOCK_TIMELINE_SPECS = [
-  { catalogId: "book-norwegian-wood", day: 12, statusLabel: "Read" },
-  { catalogId: "movie-perfect-days", day: 15, statusLabel: "Watched" },
-  { catalogId: "music-carrie-and-lowell", day: 20, statusLabel: "Listened" },
-] as const;
-
-function buildMockTimeline(monthLabel: string): DashboardTimelineEntry[] {
-  return MOCK_TIMELINE_SPECS.flatMap((spec) => {
-    const catalog = CONTENT_CATALOG.find((entry) => entry.id === spec.catalogId);
-    if (!catalog) return [];
-
-    return [
-      {
-        id: `mock-${spec.catalogId}`,
-        title: catalog.title,
-        creator: catalog.creator,
-        cover: catalog.cover,
-        typeLabel: CONTENT_TYPE_LABELS[catalog.type],
-        statusLabel: spec.statusLabel,
-        date: `2026-07-${String(spec.day).padStart(2, "0")}`,
-        dateLabel: `Jul ${spec.day}`,
-        dayOfMonth: spec.day,
-        monthLabel,
-        exploreHref: `/explore/${catalog.id}`,
-        journalItem: {} as DashboardTimelineEntry["journalItem"],
-      },
-    ];
-  });
+function workToAiPick(work: Work): AiPickItem {
+  const categoryLabel =
+    work.type === "movie" ? "Movie" : work.type === "music" ? "Music" : "Book";
+  const genres = work.genres.slice(0, 2).join(" / ");
+  return {
+    type: work.type,
+    categoryLabel,
+    title: work.title,
+    creator: work.creator,
+    reason: genres
+      ? `From the public catalog · ${genres}`
+      : "From your Open Library / TMDB / Last.fm catalog",
+  };
 }
 
 function toDashboardTimelineEntry(
   entry: ReflectionJourneyEntry,
   monthLabel: string,
-): DashboardTimelineEntry {
+): DashboardTimelineEntry | null {
   const dayOfMonth = Number(entry.date.split("-")[2]) || 0;
+  const workId =
+    entry.journalItem?.id?.replace(/^journal-/, "") || entry.id;
+  const canonical = resolveCanonicalWork({
+    workId,
+    title: entry.title,
+    creator: entry.creator,
+    type: entry.journalItem?.type,
+  });
+
+  if (!canonical || !isDisplayableApiWork(canonical)) {
+    if (entry.journalItem && !isDisplayableJournalEntry(entry.journalItem)) {
+      return null;
+    }
+    if (!canonical || !isDisplayableApiWork(canonical)) return null;
+  }
+
+  const cover = resolveCanonicalCoverUrl({
+    workId: canonical.id,
+    title: entry.title,
+    creator: entry.creator,
+    type: entry.journalItem?.type,
+    journalCover: entry.cover,
+  });
 
   return {
     ...entry,
+    id: canonical.id,
+    cover,
     dayOfMonth,
     monthLabel,
+    exploreHref: `/explore/${canonical.id}`,
   };
 }
 
@@ -79,11 +91,52 @@ export function useDesktopDashboard() {
   const reflectionData = useReflectionData();
   const { allItems, allWorks } = useLibraryItems();
   const { entries: journalEntries } = useJournalEntries();
+  const importedMap = useImportedWorkMap();
+
+  const displayableWorks = useMemo(
+    () => filterDisplayableApiWorks(Object.values(importedMap)),
+    [importedMap],
+  );
+
+  const libraryWorks = useMemo(
+    () => filterDisplayableApiWorks(allWorks),
+    [allWorks],
+  );
 
   const recentlyAdded = useMemo(() => {
-    const sorted = sortLibraryItems(allItems, "recently-added");
+    const sorted = sortLibraryItems(allItems, "recently-added").filter(
+      (item) => {
+        const canonical = resolveCanonicalWork({
+          workId: item.mediaKey,
+          title: item.title,
+          creator: item.creator,
+          type: item.type,
+        });
+        return Boolean(canonical && isDisplayableApiWork(canonical));
+      },
+    );
     return sorted.slice(0, 6);
-  }, [allItems]);
+  }, [allItems, importedMap]);
+
+  useEffect(() => {
+    logCanonicalWorkVerification(
+      "home",
+      [
+        ...recentlyAdded.map((item) => ({
+          storedWorkId: item.mediaKey,
+          title: item.title,
+          creator: item.creator,
+          type: item.type,
+        })),
+        ...libraryWorks.map((work) => ({
+          storedWorkId: work.id,
+          title: work.title,
+          creator: work.creator,
+          type: work.type,
+        })),
+      ],
+    );
+  }, [recentlyAdded, libraryWorks, importedMap]);
 
   const contentTagsByKey = useMemo(() => {
     const base = buildContentTagsMap(allItems);
@@ -105,18 +158,6 @@ export function useDesktopDashboard() {
 
   const journeyStats = useMemo(() => {
     const { books, movies, music } = reflectionData.mediaStats;
-    const hasActivity = books + movies + music > 0;
-
-    if (!hasActivity && allItems.length === 0) {
-      return {
-        monthLabel: reflectionData.monthYear,
-        books: readingStats[0]?.value ?? 12,
-        movies: readingStats[1]?.value ?? 8,
-        listeningHours: readingStats[2]?.value ?? 24,
-        moods: MOCK_MOODS,
-      };
-    }
-
     const moods = [
       ...reflectionData.moodTags.map((tag) => tag.label.toLowerCase()),
       ...tasteTags.map((tag) => tag.label.toLowerCase()),
@@ -129,32 +170,37 @@ export function useDesktopDashboard() {
       books,
       movies,
       listeningHours: music > 0 ? Math.max(music * 3, 1) : 0,
-      moods: moods.length > 0 ? moods : MOCK_MOODS,
+      moods,
     };
-  }, [allItems.length, reflectionData, tasteTags]);
+  }, [reflectionData, tasteTags]);
 
   const timelineEntries = useMemo(() => {
-    if (reflectionData.journey.length > 0) {
-      return reflectionData.journey.map((entry) =>
+    return reflectionData.journey
+      .map((entry) =>
         toDashboardTimelineEntry(entry, reflectionData.month),
-      );
-    }
-
-    return buildMockTimeline(reflectionData.month);
-  }, [reflectionData.journey, reflectionData.month]);
+      )
+      .filter((entry): entry is DashboardTimelineEntry => entry !== null);
+  }, [reflectionData.journey, reflectionData.month, importedMap]);
 
   const reflectionSummary =
     reflectionData.reflection.summary &&
     reflectionData.reflection.summary !==
       "Your reflection will grow as you explore and journal more."
       ? reflectionData.reflection.summary
-      : MOCK_REFLECTION_SUMMARY;
+      : "Your reflection will grow as you explore and journal more.";
 
   const likedTitle =
-    allItems.find((item) => item.status === "ONGOING" || item.status === "FINISHED")
-      ?.title ??
-    continueExploring[0]?.title ??
+    recentlyAdded.find(
+      (item) => item.status === "ONGOING" || item.status === "FINISHED",
+    )?.title ??
+    displayableWorks.find((work) => work.type === "book")?.title ??
     "Norwegian Wood";
+
+  const picks = useMemo(() => {
+    const pool =
+      displayableWorks.length > 0 ? displayableWorks : libraryWorks;
+    return pool.slice(0, 5).map(workToAiPick);
+  }, [displayableWorks, libraryWorks]);
 
   const aiReflectionInput = useMemo(
     () => buildAiReflectionInput(allItems, journalEntries),
@@ -166,11 +212,11 @@ export function useDesktopDashboard() {
     timelineEntries,
     reflectionSummary,
     reflectionMonthYear: reflectionData.monthYear,
-    picks: aiPicks.slice(0, 5),
+    picks,
     likedTitle,
     recentlyAdded,
-    /** Canonical Work list for Home dashboard consumers. */
-    works: allWorks,
+    /** Canonical displayable Work list for Home dashboard consumers. */
+    works: libraryWorks.length > 0 ? libraryWorks : displayableWorks,
     aiReflectionInput,
   };
 }

@@ -56,7 +56,6 @@ export default function QuickLogBar({
           <MediaSearchBar
             variant="home"
             inputId="home-media-search"
-            placeholder="Search your memories, journals, and discoveries..."
           />
         </div>
       )}

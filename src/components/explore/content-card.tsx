@@ -4,12 +4,20 @@ import { useId, useState } from "react";
 
 import { ContentCoverImage } from "@/components/explore/content-cover";
 import { MediaIcon } from "@/components/dashboard/mood-bubble-shared";
+import { useLanguage } from "@/components/i18n/language-provider";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
 import type { Content } from "@/lib/content/types";
 import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import { openExploreContent } from "@/lib/explore/open-explore-work";
 import { cn } from "@/lib/utils";
+import { cleanDescription } from "@/lib/work/clean-description";
 import {
+  normalizeWorkCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
+import {
+  findImportedWorkByIdentity,
+  findImportedWorkByTitle,
   getImportedWorkById,
   useImportedWorkMap,
 } from "@/lib/work/imported-work-catalog";
@@ -50,12 +58,21 @@ export function ContentCard({
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
   const importedMap = useImportedWorkMap();
+  const { t } = useLanguage();
 
   const imported =
-    importedMap[content.id] ?? getImportedWorkById(content.id);
-  const coverUrl = imported?.coverUrl || content.cover;
-  const description =
-    imported?.description?.trim() || content.description.trim() || "";
+    importedMap[content.id] ??
+    getImportedWorkById(content.id) ??
+    findImportedWorkByIdentity(content.title, content.creator) ??
+    findImportedWorkByTitle(content.title);
+  // Prefer API/imported remote cover; never let catalog gradient win over it.
+  const coverUrl = normalizeWorkCoverUrl(
+    resolveCoverUrl(imported?.coverUrl, content.cover),
+    { source: imported?.source ?? content.source },
+  );
+  const description = cleanDescription(
+    imported?.description || content.description,
+  );
   const rawTags = (
     imported?.moodTags?.length
       ? imported.moodTags
@@ -143,6 +160,7 @@ export function ContentCard({
             title: content.title,
             cover: coverUrl,
             coverUrl,
+            source: imported?.source ?? content.source,
           }}
           variant="compact"
           hideTitle
@@ -238,14 +256,14 @@ export function ContentCard({
                   onClick={onJournal}
                   className="rounded-full border border-white/14 bg-white/[0.04] px-3 py-1.5 text-[11px] text-white/72 transition-colors hover:border-white/24 hover:bg-white/[0.08] hover:text-white/90"
                 >
-                  Add to Journal
+                  {t("action.addToJournal")}
                 </button>
                 <button
                   type="button"
                   onClick={onViewDetails}
                   className="rounded-full border border-white/18 bg-white/[0.08] px-3 py-1.5 text-[11px] text-white/88 transition-colors hover:bg-white/[0.12]"
                 >
-                  View Details
+                  {t("action.viewDetails")}
                 </button>
               </div>
             </div>
@@ -264,7 +282,7 @@ export function ContentCard({
               : "text-white/40 hover:text-white/65",
           )}
         >
-          {expanded ? "See Less" : "See More"}
+          {expanded ? t("action.showLess") : t("action.seeMore")}
         </button>
       </div>
     </article>

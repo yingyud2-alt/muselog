@@ -15,8 +15,48 @@ export {
   searchBooks,
   type OpenLibrarySearchDoc,
 } from "@/services/api/book-service";
-export { movieService } from "@/services/api/movie-service";
-export { musicService } from "@/services/api/music-service";
+export {
+  buildTmdbPosterUrl,
+  enrichTmdbWork,
+  enrichTmdbWorks,
+  getExploreBootstrapMovies,
+  getMovieById,
+  getMoviesByCategory,
+  getNowPlayingMovies,
+  getPopularMovies,
+  getTopRatedMovies,
+  getTmdbApiKey,
+  getTmdbApiUrl,
+  getTrendingMovies,
+  mapTmdbMovieToWork,
+  movieService,
+  searchMovies,
+  TMDB_MOVIE_GENRES,
+  TMDB_SOURCE,
+  TmdbConfigError,
+  TmdbFetchError,
+  type TmdbMovieResult,
+} from "@/services/api/movie-service";
+export {
+  discoverMusic,
+  enrichLastfmWork,
+  enrichLastfmWorks,
+  getExploreBootstrapMusic,
+  getLastfmApiKey,
+  getLastfmApiUrl,
+  getMusicByCategory,
+  getPopularMusic,
+  getTrendingMusic,
+  LASTFM_SOURCE,
+  LastfmConfigError,
+  LastfmFetchError,
+  mapLastfmAlbumToWork,
+  mapLastfmArtistToWork,
+  mapLastfmTrackToWork,
+  musicService,
+  searchMusic,
+  type MusicDiscoverMode,
+} from "@/services/api/music-service";
 export { aiService } from "@/services/api/ai-service";
 export type { AiService } from "@/services/api/ai-service";
 export type {

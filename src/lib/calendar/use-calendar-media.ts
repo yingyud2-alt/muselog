@@ -2,10 +2,26 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-import { mergeMediaWithJourneyOverrides } from "@/lib/calendar/journey-utils";
-import { useJournalEntries } from "@/lib/calendar/journal-store";
+import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
+import { moveJourneyToStartDate } from "@/lib/calendar/calendar-event-layout";
+import {
+  getJourneyColor,
+  getJourneyEnd,
+  getJourneyStart,
+  mergeMediaWithJourneyOverrides,
+} from "@/lib/calendar/journey-utils";
+import {
+  upsertJournalEntry,
+  useHiddenJournalIds,
+  useJournalEntries,
+} from "@/lib/calendar/journal-store";
+import { bindJournalEntryCoverFromWork } from "@/lib/calendar/resolve-journal-work-cover";
+import {
+  isDisplayableJournalEntry,
+  logUnresolvedLegacyJournalEntries,
+} from "@/lib/work/displayable-api-work";
+import { useImportedWorkMap } from "@/lib/work/imported-work-catalog";
 import { mediaItemToWork } from "@/lib/work/work-adapters";
-import { CALENDAR_MOCK_MEDIA } from "@/types/media";
 import type { JourneyColor, MediaItem } from "@/types/media";
 
 const STORAGE_KEY = "muselog-media-journeys-v1";
@@ -95,22 +111,27 @@ export function useCalendarMedia() {
     () => EMPTY_RECORD,
   );
   const { entries: userEntries, addEntry } = useJournalEntries();
+  const hiddenList = useHiddenJournalIds();
+  const hiddenIds = useMemo(() => new Set(hiddenList), [hiddenList]);
+  // Re-bind covers when Explore/API imports update Work.coverUrl.
+  const importedMap = useImportedWorkMap();
 
   const baseItems = useMemo(() => {
-    const mockIds = new Set(CALENDAR_MOCK_MEDIA.map((item) => item.id));
-    const userById = new Map(userEntries.map((item) => [item.id, item]));
-    // Prefer journal-store overrides of mock seeds (drag/resize persistence).
-    const mocks = CALENDAR_MOCK_MEDIA.map(
-      (item) => userById.get(item.id) ?? item,
-    );
-    const added = userEntries.filter((item) => !mockIds.has(item.id));
-    return [...mocks, ...added];
-  }, [userEntries]);
+    // Production calendar: user journal only — never inject CALENDAR_MOCK_MEDIA.
+    const visible = userEntries.filter((item) => !hiddenIds.has(item.id));
+    logUnresolvedLegacyJournalEntries(visible);
+    return visible.filter((item) => isDisplayableJournalEntry(item));
+  }, [userEntries, hiddenIds, importedMap]);
 
-  const items = useMemo(
-    () => mergeMediaWithJourneyOverrides(baseItems, recordToMap(overrideRecord)),
-    [baseItems, overrideRecord],
-  );
+  const items = useMemo(() => {
+    const merged = mergeMediaWithJourneyOverrides(
+      baseItems,
+      recordToMap(overrideRecord),
+    );
+    return merged
+      .map((item) => bindJournalEntryCoverFromWork(item, importedMap))
+      .filter((item) => isDisplayableJournalEntry(item));
+  }, [baseItems, overrideRecord, importedMap]);
 
   /** Unified Work view of journal calendar entries. */
   const works = useMemo(() => items.map((item) => mediaItemToWork(item)), [items]);
@@ -131,7 +152,37 @@ export function useCalendarMedia() {
     [],
   );
 
-  return { items, works, saveJourney, addJournalEntry: addEntry };
+  /**
+   * Drag → drop onto a calendar day.
+   * Updates journal entry dates and journey overrides, then persists both.
+   */
+  const moveEntryToDate = useCallback(
+    (itemId: string, date: string) => {
+      const item = items.find((entry) => entry.id === itemId);
+      const nextStart = normalizeCalendarDate(date);
+      if (!item || !nextStart) return;
+
+      const next = moveJourneyToStartDate(item, nextStart);
+      if (next === item) return;
+
+      upsertJournalEntry(next);
+      saveJourney(
+        next.id,
+        getJourneyStart(next),
+        getJourneyEnd(next),
+        getJourneyColor(next),
+      );
+    },
+    [items, saveJourney],
+  );
+
+  return {
+    items,
+    works,
+    saveJourney,
+    moveEntryToDate,
+    addJournalEntry: addEntry,
+  };
 }
 
 export type { MediaItem };

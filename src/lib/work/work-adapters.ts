@@ -3,6 +3,11 @@ import type { LibraryItem, LibraryMediaType } from "@/lib/library/library-types"
 import type { UserMediaStatus } from "@/lib/content/user-media-state";
 import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
+import {
+  FALLBACK_COVER,
+  resolveCoverUrl,
+  withNormalizedCoverUrl,
+} from "@/lib/work/cover-url";
 import type { MediaItem, MediaStatus, MediaType } from "@/types/media";
 import type {
   ExternalRating,
@@ -16,7 +21,7 @@ import {
   toWorkUserStatus,
 } from "@/lib/work/work-status";
 
-const DEFAULT_COVER = "from-slate-800 via-slate-900 to-black";
+const DEFAULT_COVER = FALLBACK_COVER;
 
 /**
  * Normalize a provider rating payload into ExternalRating.
@@ -161,12 +166,12 @@ export function contentToWork(
   content: Content,
   partial?: Partial<Work>,
 ): Work {
-  return {
+  return withNormalizedCoverUrl({
     id: content.id,
     type: toWorkType(content.type),
     title: content.title,
     creator: content.creator,
-    coverUrl: content.cover || DEFAULT_COVER,
+    coverUrl: resolveCoverUrl(partial?.coverUrl, content.cover),
     description: content.description,
     genres: [...content.tags],
     ...withStatusFields("want", partial),
@@ -180,18 +185,18 @@ export function contentToWork(
     source: partial?.source ?? content.source,
     externalId: partial?.externalId,
     metadata: partial?.metadata,
-  };
+  });
 }
 
 /** Library shelf row → Work. */
 export function libraryItemToWork(item: LibraryItem): Work {
   const userStatus = toWorkUserStatus(item.status);
-  return {
+  return withNormalizedCoverUrl({
     id: item.mediaKey,
     type: toWorkType(item.type),
     title: item.title,
     creator: item.creator,
-    coverUrl: item.cover?.trim() || DEFAULT_COVER,
+    coverUrl: resolveCoverUrl(item.cover),
     description: item.shortReview ?? item.notes ?? "",
     genres: [],
     userStatus,
@@ -205,19 +210,19 @@ export function libraryItemToWork(item: LibraryItem): Work {
       item.status === "DROPPED"
         ? item.notes ?? item.shortReview
         : undefined,
-  };
+  });
 }
 
 /** Journal media entry → Work. */
 export function mediaItemToWork(item: MediaItem): Work {
   const mediaKey = item.id.replace(/^journal-/, "");
   const userStatus = toWorkUserStatus(item.status);
-  return {
+  return withNormalizedCoverUrl({
     id: mediaKey.startsWith("calendar-") ? item.id : mediaKey,
     type: toWorkType(item.type),
     title: item.title,
     creator: item.creator,
-    coverUrl: item.cover || DEFAULT_COVER,
+    coverUrl: resolveCoverUrl(item.cover),
     description: item.note || item.quote || "",
     genres: [...item.tags],
     userStatus,
@@ -231,7 +236,7 @@ export function mediaItemToWork(item: MediaItem): Work {
     moodTags: [...item.tags],
     rating: item.rating > 0 ? item.rating : undefined,
     review: item.note || undefined,
-  };
+  });
 }
 
 /** Work → LibraryItem for existing UI props (no visual change). */
@@ -241,12 +246,13 @@ export function workToLibraryItem(
 ): LibraryItem {
   const now = new Date().toISOString();
   const status = work.userStatus ?? work.userState;
+  const coverUrl = withNormalizedCoverUrl(work).coverUrl;
   return {
     mediaKey: work.id,
     contentId: work.id.startsWith("bubble-") ? null : work.id,
     title: work.title,
     creator: work.creator,
-    cover: work.coverUrl,
+    cover: coverUrl,
     type: toLibraryMediaType(work.type),
     status: toUserMediaStatus(status),
     notes: work.droppedReason ?? work.userNotes ?? undefined,
@@ -268,6 +274,7 @@ export function workToMediaItem(
   extras?: Partial<MediaItem>,
 ): MediaItem {
   const status = work.userStatus ?? work.userState;
+  const coverUrl = withNormalizedCoverUrl(work).coverUrl;
   const date =
     normalizeCalendarDate(work.timeline.endDate) ??
     normalizeCalendarDate(work.timeline.startDate) ??
@@ -278,7 +285,7 @@ export function workToMediaItem(
     id: extras?.id ?? `journal-${work.id}`,
     type: toMediaType(work.type),
     title: work.title,
-    cover: work.coverUrl,
+    cover: coverUrl,
     creator: work.creator,
     rating: work.rating ?? extras?.rating ?? 0,
     status: toMediaStatus(status),
@@ -298,9 +305,10 @@ export function workToMediaItem(
 export function mergeWorks(base: Work, overlay: Partial<Work>): Work {
   const userStatus =
     overlay.userStatus ?? overlay.userState ?? base.userStatus ?? base.userState;
-  return {
+  return withNormalizedCoverUrl({
     ...base,
     ...overlay,
+    coverUrl: resolveCoverUrl(overlay.coverUrl, base.coverUrl),
     genres: overlay.genres ?? base.genres,
     moodTags: overlay.moodTags ?? base.moodTags,
     timeline: {
@@ -327,5 +335,5 @@ export function mergeWorks(base: Work, overlay: Partial<Work>): Work {
     source: overlay.source ?? base.source,
     externalId: overlay.externalId ?? base.externalId,
     metadata: overlay.metadata ?? base.metadata,
-  };
+  });
 }

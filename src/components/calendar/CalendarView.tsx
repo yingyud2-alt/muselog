@@ -15,76 +15,27 @@ import {
 import { MonthSummary } from "@/components/calendar/MonthSummary";
 import { HabitStatCards } from "@/components/habit/HabitStatCards";
 import { useActiveMonth } from "@/lib/calendar/active-month-store";
-import { normalizeCalendarDate } from "@/lib/calendar/calendar-date";
-import { moveJourneyToStartDate } from "@/lib/calendar/calendar-event-layout";
-import { upsertJournalEntry } from "@/lib/calendar/journal-store";
+import { openJournalCalendarWorkDetail } from "@/lib/calendar/open-journal-work-detail";
 import { useCalendarMedia } from "@/lib/calendar/use-calendar-media";
 import { sortMediaByDateDesc } from "@/lib/calendar/utils";
-import {
-  mediaKeyFromJournalItemId,
-  mediaTypeToContentType,
-} from "@/lib/content/bubble-content-bridge";
-import { openJournalQuickLog } from "@/lib/detail/detail-overlay-store";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
-import { MEDIA_EXPLORE_IDS, type MediaItem } from "@/types/media";
-
-function resolveWorkIdForEntry(item: MediaItem): string {
-  if (MEDIA_EXPLORE_IDS[item.id]) return MEDIA_EXPLORE_IDS[item.id];
-  if (item.id.startsWith("journal-")) {
-    return mediaKeyFromJournalItemId(item.id);
-  }
-  if (item.id.startsWith("checkin-")) return "";
-  return item.id;
-}
-
-function openEntryQuickMemory(item: MediaItem) {
-  openJournalQuickLog(resolveWorkIdForEntry(item), {
-    entryId: item.id,
-    initialDate:
-      normalizeCalendarDate(item.startDate) ??
-      normalizeCalendarDate(item.date) ??
-      undefined,
-    snapshot: {
-      title: item.title,
-      creator: item.creator,
-      type: mediaTypeToContentType(item.type),
-      cover: item.cover,
-      tags: item.tags,
-    },
-  });
-}
+import type { MediaItem } from "@/types/media";
 
 export function CalendarView() {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [addDate, setAddDate] = useState<string | null>(null);
-  const { items } = useCalendarMedia();
+  const { items, moveEntryToDate } = useCalendarMedia();
   const { year, month, monthLabel, goPrev, goNext } = useActiveMonth();
 
   const riverItems = useMemo(() => sortMediaByDateDesc(items), [items]);
-  const itemsById = useMemo(
-    () => new Map(items.map((item) => [item.id, item])),
-    [items],
-  );
 
   const handleOpenEntry = useCallback((item: MediaItem) => {
-    openEntryQuickMemory(item);
+    openJournalCalendarWorkDetail(item);
   }, []);
 
   const handleSelectDate = useCallback((date: string) => {
     setAddDate(date);
   }, []);
-
-  const handleMoveCover = useCallback(
-    (itemId: string, date: string) => {
-      const item = itemsById.get(itemId);
-      const nextStart = normalizeCalendarDate(date);
-      if (!item || !nextStart) return;
-      const next = moveJourneyToStartDate(item, nextStart);
-      if (next === item) return;
-      upsertJournalEntry(next);
-    },
-    [itemsById],
-  );
 
   const showMonthGrid = viewMode === "month";
   const showRiver = viewMode === "timeline";
@@ -110,9 +61,8 @@ export function CalendarView() {
           >
             {showMonthGrid && (
               <section>
-                <p className="font-label mb-3 text-center text-[11px] leading-relaxed tracking-[0.04em] text-white/32 md:mb-4">
-                  Click a day to add a memory. Drag a cover onto another date to
-                  move when the journey began.
+                <p className="font-label mb-4 text-center text-[11px] leading-relaxed tracking-[0.04em] text-white/30 md:mb-5">
+                  Tap a day to add a memory. Drag a card to another date to move it.
                 </p>
 
                 <CalendarMonthGrid
@@ -123,7 +73,7 @@ export function CalendarView() {
                   selectedDate={addDate}
                   onSelectDate={handleSelectDate}
                   onOpenEntry={handleOpenEntry}
-                  onMoveCover={handleMoveCover}
+                  onMoveCover={moveEntryToDate}
                   variant="desktop"
                 />
 
@@ -135,7 +85,7 @@ export function CalendarView() {
                   items={items}
                   year={year}
                   month={month}
-                  onSelectItem={(item) => openEntryQuickMemory(item)}
+                  onSelectItem={(item) => openJournalCalendarWorkDetail(item)}
                   className="mt-10"
                 />
               </section>
@@ -149,7 +99,7 @@ export function CalendarView() {
                       key={memory.id}
                       memory={memory}
                       index={index}
-                      onSelect={(item) => openEntryQuickMemory(item)}
+                      onSelect={(item) => openJournalCalendarWorkDetail(item)}
                     />
                   ))}
                 </div>

@@ -8,6 +8,7 @@ import type {
   ReflectionMoodTag,
   ReflectionTasteTag,
 } from "@/lib/reflection/reflection-types";
+import { resolveCanonicalCoverUrl } from "@/lib/work/resolve-canonical-work";
 import type { HabitLog } from "@/types/habit";
 import type { MediaItem } from "@/types/media";
 
@@ -274,11 +275,18 @@ export function calculateMonthJourney(
       const typeKey =
         entry.type === "book" ? "BOOK" : entry.type === "movie" ? "MOVIE" : "MUSIC";
 
+      const workId = entry.id.replace(/^journal-/, "");
       return {
         id: entry.id,
         title: entry.title,
         creator: entry.creator,
-        cover: entry.cover,
+        cover: resolveCanonicalCoverUrl({
+          workId,
+          title: entry.title,
+          creator: entry.creator,
+          type: entry.type,
+          journalCover: entry.cover,
+        }),
         typeLabel: getLibraryLabels(typeKey).ongoingShort,
         statusLabel: journeyStatusLabel(entry),
         date,

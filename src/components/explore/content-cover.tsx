@@ -1,9 +1,22 @@
+"use client";
+
+import { useState } from "react";
+
 import { cn } from "@/lib/utils";
+import {
+  FALLBACK_COVER,
+  isRemoteCoverUrl,
+  normalizeWorkCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
 
 import type { Content } from "@/lib/content/types";
 
 type ContentCoverImageProps = {
-  content: Pick<Content, "title" | "cover"> & { coverUrl?: string };
+  content: Pick<Content, "title" | "cover"> & {
+    coverUrl?: string;
+    source?: string;
+  };
   className?: string;
   /**
    * card — standard poster; compact — shorter discovery density;
@@ -14,29 +27,8 @@ type ContentCoverImageProps = {
   hideTitle?: boolean;
 };
 
-function isRemoteCover(cover: string): boolean {
-  const value = cover.trim();
-  if (!value) return false;
-  if (
-    value.includes("from-") ||
-    value.includes("via-") ||
-    value.includes("to-") ||
-    value.includes("gradient")
-  ) {
-    return false;
-  }
-  return (
-    value.startsWith("https://") ||
-    value.startsWith("http://") ||
-    value.startsWith("/") ||
-    value.startsWith("data:")
-  );
-}
-
 /**
- * Explore cover — gradient class or remote image URL (API public catalog).
- * Prefers `coverUrl` when present so Open Library covers never lose to gradients.
- * Loading behavior unchanged — presentation variants only.
+ * Explore cover — prefers normalized coverUrl, then cover, then placeholder.
  */
 export function ContentCoverImage({
   content,
@@ -44,8 +36,13 @@ export function ContentCoverImage({
   variant = "card",
   hideTitle = false,
 }: ContentCoverImageProps) {
-  const coverValue = content.coverUrl?.trim() || content.cover;
-  const remote = isRemoteCover(coverValue);
+  const resolved = normalizeWorkCoverUrl(
+    resolveCoverUrl(content.coverUrl, content.cover),
+    { source: content.source },
+  );
+  const [failed, setFailed] = useState(false);
+  const remote = !failed && isRemoteCoverUrl(resolved);
+  const gradient = remote ? FALLBACK_COVER : resolved || FALLBACK_COVER;
   const showTitle =
     !hideTitle && variant !== "list" && variant !== "compact";
 
@@ -54,12 +51,11 @@ export function ContentCoverImage({
       className={cn(
         "relative overflow-hidden rounded-2xl shadow-sm ring-1 ring-white/10",
         variant === "card" && "aspect-[2/3] w-full",
-        // Shorter than 2/3 poster — denser discovery feed.
         variant === "compact" && "aspect-[3/4] w-full",
         variant === "detail" && "aspect-[2/3] w-full max-w-[220px]",
         variant === "list" && "aspect-[5/3] w-full",
         !remote && "bg-gradient-to-br",
-        !remote && coverValue,
+        !remote && gradient,
         remote && "bg-[#101820]",
         className,
       )}
@@ -67,9 +63,10 @@ export function ContentCoverImage({
       {remote ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={coverValue}
+          src={resolved}
           alt=""
           className="absolute inset-0 size-full object-cover"
+          onError={() => setFailed(true)}
         />
       ) : null}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-white/5" />

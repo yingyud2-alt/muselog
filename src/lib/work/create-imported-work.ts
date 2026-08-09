@@ -1,9 +1,14 @@
+import {
+  coverCandidatesFromMetadata,
+  FALLBACK_COVER,
+  normalizeWorkCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
 import { normalizeExternalRatings } from "@/lib/work/work-adapters";
 import type { ExternalRating, Work, WorkType } from "@/types/work";
 
 /** MuseLog placeholder cover when an API omits artwork. */
-export const IMPORTED_WORK_PLACEHOLDER_COVER =
-  "from-slate-800 via-slate-900 to-black";
+export const IMPORTED_WORK_PLACEHOLDER_COVER = FALLBACK_COVER;
 
 /**
  * Identity fields for an external API result.
@@ -17,7 +22,7 @@ export type ImportedWorkInput = {
   title: string;
   creator: string;
   /** Map API cover → coverUrl. Empty/missing uses placeholder. */
-  coverUrl?: string | null;
+  coverUrl?: string | number | null;
   description?: string | null;
   releaseDate?: string | null;
   genres?: string[];
@@ -29,38 +34,19 @@ export type ImportedWorkInput = {
 };
 
 /**
- * Build a catalog Work from an external API hit.
- * Does not write user-media / memory / journal state.
+ * Central Work creation pipeline for API imports.
+ * Always writes a normalized `coverUrl` so Library / Journal / Calendar
+ * receive the same remote artwork as Explore.
  */
-function isUsableCoverUrl(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return false;
-  // Real remote / local asset — keep as Work.coverUrl.
-  if (
-    trimmed.startsWith("https://") ||
-    trimmed.startsWith("http://") ||
-    trimmed.startsWith("/") ||
-    trimmed.startsWith("data:")
-  ) {
-    return true;
-  }
-  // Legacy MuseLog gradient class strings are also valid covers.
-  if (
-    trimmed.includes("from-") ||
-    trimmed.includes("via-") ||
-    trimmed.includes("to-")
-  ) {
-    return true;
-  }
-  return false;
-}
-
 export function createImportedWork(input: ImportedWorkInput): Work {
-  const rawCover =
-    typeof input.coverUrl === "string" ? input.coverUrl.trim() : "";
-  const coverUrl = isUsableCoverUrl(rawCover)
-    ? rawCover
-    : IMPORTED_WORK_PLACEHOLDER_COVER;
+  const coverUrl = resolveCoverUrl(
+    input.coverUrl,
+    ...coverCandidatesFromMetadata(input.metadata),
+  );
+  // Re-run with source so bare TMDB poster paths resolve correctly.
+  const normalizedCover = normalizeWorkCoverUrl(coverUrl, {
+    source: input.source,
+  });
 
   const description =
     typeof input.description === "string" && input.description.trim()
@@ -72,7 +58,7 @@ export function createImportedWork(input: ImportedWorkInput): Work {
     type: input.type,
     title: input.title.trim() || "Untitled",
     creator: input.creator.trim() || "Unknown",
-    coverUrl,
+    coverUrl: normalizedCover,
     description,
     releaseDate: input.releaseDate?.trim() || undefined,
     genres: input.genres ? [...input.genres] : [],
@@ -93,4 +79,21 @@ export function createImportedWork(input: ImportedWorkInput): Work {
 export function openLibraryWorkId(externalId: string): string {
   const cleaned = externalId.replace(/^\/+/, "").replace(/\//g, "-");
   return `ol-${cleaned}`;
+}
+
+/** Stable MuseLog id for a TMDB movie id. */
+export function tmdbWorkId(externalId: string | number): string {
+  const cleaned = String(externalId).trim().replace(/^\/+/, "");
+  return `tmdb-${cleaned}`;
+}
+
+/** Stable MuseLog id for a Last.fm album / track / artist key. */
+export function lastfmWorkId(kind: string, externalId: string): string {
+  const cleaned = externalId
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+/, "")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "");
+  return `lastfm-${kind}-${cleaned || "unknown"}`;
 }

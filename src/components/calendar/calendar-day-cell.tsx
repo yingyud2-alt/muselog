@@ -2,8 +2,8 @@
 
 import { Plus } from "lucide-react";
 
-import { MemoryCover } from "@/components/calendar/memory-cover";
 import { EmptyDayDecoration } from "@/components/calendar/empty-day-decoration";
+import { MemoryDayCard } from "@/components/calendar/memory-day-card";
 import { cn } from "@/lib/utils";
 import type { MediaItem } from "@/types/media";
 
@@ -15,19 +15,22 @@ type CalendarDayCellProps = {
   isCurrentMonth: boolean;
   isToday?: boolean;
   isSelected?: boolean;
-  /** Covers whose journey starts on this day. */
+  /** Memories whose journey starts on this day. */
   startEntries?: MediaItem[];
   isDropTarget?: boolean;
+  isDragging?: boolean;
+  draggingItemId?: string | null;
   onSelectDate: (date: string) => void;
   onOpenEntry: (item: MediaItem) => void;
   onDropCover?: (itemId: string, date: string) => void;
   onDragHover?: (date: string | null) => void;
+  onDragItemStart?: (itemId: string) => void;
+  onDragItemEnd?: () => void;
   variant?: "desktop" | "mobile";
 };
 
 /**
- * Compact monthly journal day — fixed height.
- * Cover sits in-cell; period line is drawn by the week overlay.
+ * Month-grid day cell — Apple calendar structure, archive cover cards inside.
  */
 export function CalendarDayCell({
   day,
@@ -37,15 +40,22 @@ export function CalendarDayCell({
   isSelected = false,
   startEntries = [],
   isDropTarget = false,
+  isDragging = false,
+  draggingItemId = null,
   onSelectDate,
   onOpenEntry,
   onDropCover,
   onDragHover,
+  onDragItemStart,
+  onDragItemEnd,
   variant = "desktop",
 }: CalendarDayCellProps) {
   const isMobile = variant === "mobile";
-  const visible = startEntries.slice(0, 2);
-  const overflow = startEntries.length - visible.length;
+  const primary = startEntries[0];
+  const overflow = Math.max(0, startEntries.length - 1);
+  const isSourceDay = Boolean(
+    draggingItemId && startEntries.some((item) => item.id === draggingItemId),
+  );
 
   if (!isCurrentMonth) {
     return (
@@ -62,13 +72,13 @@ export function CalendarDayCell({
       role="gridcell"
       data-calendar-date={date}
       onDragOver={(event) => {
-        if (!onDropCover) return;
+        if (!onDropCover || !isDragging) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
         onDragHover?.(date);
       }}
       onDragEnter={(event) => {
-        if (!onDropCover) return;
+        if (!onDropCover || !isDragging) return;
         event.preventDefault();
         onDragHover?.(date);
       }}
@@ -91,16 +101,17 @@ export function CalendarDayCell({
           event.dataTransfer.getData(JOURNAL_COVER_DRAG_MIME) ||
           event.dataTransfer.getData("text/plain");
         if (id) onDropCover(id, date);
+        onDragItemEnd?.();
       }}
       className={cn(
-        "group relative z-10 flex flex-col overflow-hidden rounded-[10px] transition-colors",
-        isMobile
-          ? "h-[56px] px-0.5 pt-0.5"
-          : "h-[64px] px-1 pt-0.5 md:h-[68px] md:rounded-[12px]",
-        "hover:bg-white/[0.04]",
-        isToday && "ring-1 ring-white/14",
-        isSelected && "bg-white/[0.05] ring-1 ring-white/18",
-        isDropTarget && "bg-white/[0.12] ring-2 ring-white/40",
+        "group relative z-0 flex h-full min-h-0 flex-col bg-[#0E131A] px-1.5 pb-2 pt-1.5 transition-[background-color,box-shadow,ring-color] duration-200",
+        isMobile ? "min-h-[118px] px-1 pb-1.5 pt-1" : "min-h-[148px] md:min-h-[158px]",
+        "hover:z-20 hover:bg-[#121821]",
+        isToday && "bg-[#141A22]",
+        isSelected && "bg-[#171E28]",
+        isDropTarget &&
+          "z-30 bg-[#1A2430] ring-1 ring-inset ring-teal-200/35 shadow-[inset_0_0_24px_rgba(94,234,212,0.08)]",
+        isSourceDay && !isDropTarget && "bg-[#10161E]",
       )}
     >
       <button
@@ -108,15 +119,18 @@ export function CalendarDayCell({
         onClick={() => onSelectDate(date)}
         aria-label={`Add to Journal on ${date}`}
         className={cn(
-          "flex w-full shrink-0 items-start justify-between",
+          "mb-1 flex w-full shrink-0 items-center justify-between",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20",
         )}
       >
         <span
           className={cn(
-            "tabular-nums leading-none text-white/55",
-            isMobile ? "text-[10px]" : "text-[11px]",
-            isToday && "font-medium text-white/85",
+            "inline-flex items-center justify-center tabular-nums leading-none",
+            isMobile ? "size-5 text-[11px]" : "size-6 text-[12px]",
+            isToday
+              ? "rounded-full bg-white/90 font-semibold text-[#0D1117]"
+              : "font-medium text-white/55",
+            isDropTarget && !isToday && "text-teal-100/80",
           )}
         >
           {day}
@@ -124,61 +138,75 @@ export function CalendarDayCell({
         {startEntries.length === 0 ? (
           <span
             aria-hidden="true"
-            className="opacity-0 transition-opacity group-hover:opacity-100"
+            className={cn(
+              "opacity-0 transition-opacity group-hover:opacity-100",
+              isDropTarget && "opacity-100",
+            )}
           >
-            <Plus className="size-2.5 text-white/35" />
+            <Plus
+              className={cn(
+                "size-3 text-white/30",
+                isDropTarget && "text-teal-200/70",
+              )}
+            />
           </span>
         ) : null}
       </button>
 
-      <div className="mt-0.5 flex min-h-0 flex-1 items-end gap-0.5 overflow-hidden pb-1">
-        {visible.map((item) => {
-          const mood = item.tags?.[0];
-          return (
-            <button
-              key={item.id}
-              type="button"
-              draggable
-              title={`${item.title}${mood ? ` · ${mood}` : ""}`}
-              aria-label={`${item.title}. Drag cover to move start date.`}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onOpenEntry(item);
-              }}
-              onDragStart={(event) => {
-                event.stopPropagation();
+      <div className="relative flex min-h-0 flex-1 flex-col items-stretch justify-start overflow-visible">
+        {primary ? (
+          <>
+            <MemoryDayCard
+              item={primary}
+              variant={variant}
+              isDragging={draggingItemId === primary.id}
+              dragActive={isDragging}
+              onOpen={onOpenEntry}
+              onDragStart={(event, item) => {
                 event.dataTransfer.setData(JOURNAL_COVER_DRAG_MIME, item.id);
                 event.dataTransfer.setData("text/plain", item.id);
                 event.dataTransfer.effectAllowed = "move";
-                event.currentTarget.style.opacity = "0.4";
+
+                const cover = event.currentTarget.querySelector<HTMLElement>(
+                  "[data-memory-cover]",
+                );
+                if (cover) {
+                  const rect = cover.getBoundingClientRect();
+                  const preview = cover.cloneNode(true) as HTMLElement;
+                  preview.style.position = "fixed";
+                  preview.style.top = "-9999px";
+                  preview.style.left = "-9999px";
+                  preview.style.width = `${rect.width}px`;
+                  preview.style.opacity = "0.92";
+                  preview.style.pointerEvents = "none";
+                  preview.style.zIndex = "9999";
+                  document.body.appendChild(preview);
+                  event.dataTransfer.setDragImage(
+                    preview,
+                    rect.width / 2,
+                    rect.height / 2,
+                  );
+                  window.setTimeout(() => preview.remove(), 0);
+                }
+
+                onDragItemStart?.(item.id);
               }}
-              onDragEnd={(event) => {
-                event.currentTarget.style.opacity = "1";
+              onDragEnd={() => {
                 onDragHover?.(null);
+                onDragItemEnd?.();
               }}
-              className={cn(
-                "cursor-grab rounded active:cursor-grabbing",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25",
-              )}
-            >
-              <MemoryCover
-                cover={item.cover}
-                title={item.title}
+            />
+            {overflow > 0 ? (
+              <p
                 className={cn(
-                  "rounded-[3px] ring-1 ring-white/16",
-                  isMobile
-                    ? "aspect-[2/3] w-[18px] max-h-[24px]"
-                    : "aspect-[2/3] w-[22px] max-h-[30px]",
+                  "mt-1 text-center text-white/35",
+                  isMobile ? "text-[8px]" : "text-[9px]",
                 )}
-              />
-            </button>
-          );
-        })}
-        {overflow > 0 ? (
-          <span className="pb-0.5 text-[8px] leading-none text-white/35">
-            +{overflow}
-          </span>
+              >
+                +{overflow} more
+              </p>
+            ) : null}
+          </>
         ) : null}
       </div>
     </div>

@@ -1,19 +1,42 @@
 "use client";
 
-const AI_NOTICES = [
-  "AI noticed your recent mood feels reflective",
-  "Your recent journey feels quietly nostalgic",
-  "AI sensed a softer rhythm in your week",
-] as const;
+import { useLanguage } from "@/components/i18n/language-provider";
+import { translateMoodLabel } from "@/lib/i18n/mood-label";
+import type { RecommendationMood } from "@/lib/recommendation/mood-taxonomy";
 
 type BubbleAiMoodLabelProps = {
   className?: string;
+  mood?: RecommendationMood | string;
+  onReshuffle?: () => void;
 };
 
-export function BubbleAiMoodLabel({ className }: BubbleAiMoodLabelProps) {
-  // Deterministic mock — no live AI system
-  const dayIndex = new Date().getDate() % AI_NOTICES.length;
-  const label = AI_NOTICES[dayIndex];
+/**
+ * Mood recommendation label for the homepage bubble field.
+ * Metadata-based recommender — not an external LLM.
+ */
+export function BubbleAiMoodLabel({
+  className,
+  mood = "reflective",
+  onReshuffle,
+}: BubbleAiMoodLabelProps) {
+  const { t } = useLanguage();
+  const label = `${t("page.moodRecommendation")} · ${translateMoodLabel(t, mood)}`;
+
+  if (onReshuffle) {
+    return (
+      <button
+        type="button"
+        onClick={onReshuffle}
+        className={
+          className ??
+          "font-display absolute left-1/2 top-[18%] z-20 -translate-x-1/2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3.5 py-1.5 text-[11px] font-bold tracking-wide text-white/42 backdrop-blur-md transition-colors hover:border-white/[0.14] hover:text-white/58 md:top-[16%]"
+        }
+        aria-label={t("page.moodRecommendation")}
+      >
+        {label}
+      </button>
+    );
+  }
 
   return (
     <p

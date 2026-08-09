@@ -40,6 +40,11 @@ export type DetailLayer =
       snapshot?: WorkPreviewSnapshot;
     }
   | {
+      type: "journal-memory-detail";
+      /** Journal / calendar MediaItem id. */
+      entryId: string;
+    }
+  | {
       type: "journal-quick-log";
       /** Empty string = create flow with work search. */
       workId: string;
@@ -243,6 +248,16 @@ export function openRecommendationDetail(recommendation: Recommendation) {
 export function openRecommendationBatch(recommendations: Recommendation[]) {
   if (state.stack.length === 0) captureReturnContextBeforeOpen();
   pushLayer({ type: "recommendation-batch", recommendations });
+}
+
+/** Open Journal Memory Detail (calendar entry) — not Work Detail. */
+export function openJournalMemoryDetail(entryId: string) {
+  if (!entryId.trim()) return;
+  if (state.stack.length === 0) captureReturnContextBeforeOpen();
+  pushLayer({
+    type: "journal-memory-detail",
+    entryId: entryId.trim(),
+  });
 }
 
 /** Open Quick Memory modal for a work (no route change; scroll preserved). */

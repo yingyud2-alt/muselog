@@ -6,11 +6,14 @@ import { BookOpen, Film, Headphones, Mic, Tv, X, type LucideIcon } from "lucide-
 
 import { BubbleActionPanel, type BubbleSubPanel } from "@/components/dashboard/bubble-action-panel";
 import { getBubbleEmotionalMeta } from "@/components/dashboard/bubble-emotional-meta";
+import { useBubbleLocalizedDisplay } from "@/components/dashboard/use-bubble-localized-display";
+import { useLanguage } from "@/components/i18n/language-provider";
 import {
   MEDIA_ACTION_OVERLAY_CLASS,
   MediaActionCover,
   MediaActionModal,
 } from "@/components/shared/media-action-modal";
+import { translateMoodLabel } from "@/lib/i18n/mood-label";
 import { MOBILE_NAV_CLEARANCE } from "@/lib/mobile/nav-items";
 import { useBubbleMediaState } from "@/lib/content/user-media-state";
 import { cn } from "@/lib/utils";
@@ -50,7 +53,20 @@ export function MediaIcon({
 }
 
 type BubbleContentProps = {
-  work: Pick<WorkBubble, "type" | "quote" | "title" | "tags" | "mood" | "id" | "creator">;
+  work: Pick<
+    WorkBubble,
+    | "type"
+    | "quote"
+    | "title"
+    | "tags"
+    | "mood"
+    | "id"
+    | "creator"
+    | "workId"
+    | "localizedTitle"
+    | "localizedCreator"
+    | "localizedQuote"
+  >;
   state: BubbleTextState;
   diameter: number;
   /** Minimal idle state: media type icon only */
@@ -60,13 +76,6 @@ type BubbleContentProps = {
   reveal?: boolean;
 };
 
-function resolveBubbleQuote(
-  work: Pick<WorkBubble, "quote" | "title">,
-): string {
-  const quote = work.quote?.trim();
-  return quote && quote.length > 0 ? quote : work.title;
-}
-
 export function BubbleContent({
   work,
   state,
@@ -75,16 +84,19 @@ export function BubbleContent({
   showMood = false,
   reveal = false,
 }: BubbleContentProps) {
+  const { t } = useLanguage();
   const typography = getBubbleTypography(diameter, state);
   const contentBox = getContentBox(diameter, state);
   const isFocused = state === "focused";
   const meta = showMood ? getBubbleEmotionalMeta(work) : null;
-  const quote = resolveBubbleQuote(work);
+  const display = useBubbleLocalizedDisplay(work);
   const iconSize = Math.max(
     12,
     Math.min(isFocused ? 20 : 16, diameter * (isFocused ? 0.09 : 0.08)),
   );
   const creatorSize = Math.max(8, typography.title - 1.5);
+  const showLanguageToggle =
+    !compact && display.canToggle && diameter >= 150;
 
   if (compact) {
     return (
@@ -102,6 +114,13 @@ export function BubbleContent({
       </div>
     );
   }
+
+  const teaserClass = display.isZh
+    ? "font-bubble-zh-teaser w-full whitespace-normal break-words [overflow-wrap:anywhere]"
+    : "font-display w-full whitespace-normal break-words [overflow-wrap:anywhere]";
+  const titleClass = display.isZh
+    ? "font-bubble-zh-title w-full whitespace-normal break-words [overflow-wrap:anywhere]"
+    : "font-display w-full whitespace-normal break-words [overflow-wrap:anywhere]";
 
   const body = (
     <div
@@ -123,47 +142,53 @@ export function BubbleContent({
         }}
       />
       <p
-        className="font-display w-full whitespace-normal break-words [overflow-wrap:anywhere]"
+        className={teaserClass}
         style={{
           marginTop: typography.typeToQuoteGap,
           fontSize: typography.quote,
-          letterSpacing: typography.quoteTracking,
-          lineHeight: typography.quoteLineHeight,
-          fontWeight: typography.quoteFontWeight,
+          letterSpacing: display.isZh ? "0.01em" : typography.quoteTracking,
+          lineHeight: display.isZh ? 1.5 : typography.quoteLineHeight,
+          fontWeight: display.isZh ? 400 : typography.quoteFontWeight,
           color: isFocused
             ? BUBBLE_TEXT_COLORS.quoteFocused
             : BUBBLE_TEXT_COLORS.quote,
           opacity: typography.quoteOpacity,
           maxHeight:
             typography.quote *
-            typography.quoteLineHeight *
+            (display.isZh ? 1.5 : typography.quoteLineHeight) *
             typography.quoteMaxLines,
           overflow: "hidden",
         }}
       >
-        &ldquo;{quote}&rdquo;
+        {display.isZh ? (
+          display.teaser
+        ) : (
+          <>
+            &ldquo;{display.teaser}&rdquo;
+          </>
+        )}
       </p>
       <p
-        className="font-display w-full whitespace-normal break-words [overflow-wrap:anywhere]"
+        className={titleClass}
         style={{
           marginTop: typography.quoteToTitleGap,
           fontSize: typography.title,
-          lineHeight: typography.titleLineHeight,
-          fontWeight: typography.titleFontWeight,
+          lineHeight: display.isZh ? 1.3 : typography.titleLineHeight,
+          fontWeight: display.isZh ? 500 : typography.titleFontWeight,
           color: isFocused
             ? BUBBLE_TEXT_COLORS.titleFocused
             : BUBBLE_TEXT_COLORS.title,
           opacity: typography.titleOpacity,
           maxHeight:
             typography.title *
-            typography.titleLineHeight *
+            (display.isZh ? 1.3 : typography.titleLineHeight) *
             typography.titleMaxLines,
           overflow: "hidden",
         }}
       >
-        {work.title}
+        {display.title}
       </p>
-      {work.creator ? (
+      {display.creator ? (
         <p
           className="font-display w-full truncate"
           style={{
@@ -175,7 +200,7 @@ export function BubbleContent({
             opacity: isFocused ? 0.72 : 0.58,
           }}
         >
-          {work.creator}
+          {display.creator}
         </p>
       ) : null}
       {meta && diameter >= 130 ? (
@@ -188,8 +213,32 @@ export function BubbleContent({
             opacity: 0.45,
           }}
         >
-          {meta.mood}
+          {translateMoodLabel(t, meta.mood)}
         </p>
+      ) : null}
+      {showLanguageToggle ? (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={t(display.toggleLabelKey)}
+          className="pointer-events-auto mt-1 cursor-pointer font-label text-[9px] tracking-[0.08em] text-white/40 underline-offset-2 transition hover:text-white/62 hover:underline"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            display.toggle();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            display.toggle();
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          {t(display.toggleLabelKey)}
+        </span>
       ) : null}
     </div>
   );
@@ -209,7 +258,15 @@ export function BubbleContent({
 
   return (
     <div className="pointer-events-none flex h-full w-full items-center justify-center overflow-hidden rounded-full">
-      {body}
+      <motion.div
+        key={`${display.showOriginal ? "orig" : "zh"}-${display.teaser}`}
+        className="flex h-full w-full items-center justify-center"
+        initial={{ opacity: 0.72 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.18 }}
+      >
+        {body}
+      </motion.div>
     </div>
   );
 }

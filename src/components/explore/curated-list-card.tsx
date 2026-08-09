@@ -20,6 +20,7 @@ export function CuratedListCard({ list }: CuratedListCardProps) {
     title: list.title,
     cover: previewItems[0]?.cover || list.cover,
     coverUrl: previewItems[0]?.cover || list.cover,
+    source: previewItems[0]?.source,
   };
 
   return (

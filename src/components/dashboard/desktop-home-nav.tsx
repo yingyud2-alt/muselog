@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
+import { useLanguage } from "@/components/i18n/language-provider";
+import { NavLabel } from "@/components/i18n/nav-label";
 import {
   DESKTOP_NAV_ITEMS,
   isDesktopNavActive,
@@ -18,6 +20,7 @@ export function openDesktopNavigation() {
 /** @deprecated Replaced by DesktopTopNav in root layout. */
 export function DesktopHomeNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <div
@@ -42,14 +45,18 @@ export function DesktopHomeNav() {
                 : "text-white/50 hover:bg-white/[0.06] hover:text-white/78",
             )}
           >
-            {item.title}
+            <NavLabel
+              titleKey={item.titleKey}
+              subtitleKey={item.subtitleKey}
+              variant="desktop"
+            />
           </Link>
         );
       })}
 
       <button
         type="button"
-        aria-label="Open navigation menu"
+        aria-label={t("nav.desktopAria")}
         onClick={openDesktopNavigation}
         className={cn(
           "ml-0.5 flex size-8 items-center justify-center rounded-full",

@@ -28,6 +28,7 @@ import {
 } from "@/lib/detail/detail-overlay-store";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
+import { cleanDescription } from "@/lib/work/clean-description";
 import { resolveCoverUrl } from "@/lib/work/cover-url";
 import {
   getImportedWorkById,
@@ -102,13 +103,13 @@ export function WorkPreviewModal({
     libraryItem?.cover,
     catalog?.cover,
   );
-  const description =
-    catalog?.description ??
-    imported?.description ??
-    snapshot?.description ??
-    libraryItem?.shortReview ??
-    libraryItem?.notes ??
-    "A quiet work waiting in your cultural orbit.";
+  const description = cleanDescription(
+    catalog?.description ||
+      imported?.description ||
+      snapshot?.description ||
+      libraryItem?.shortReview ||
+      libraryItem?.notes,
+  );
   const moodTags =
     recommendation?.tags?.slice(0, 4) ??
     (libraryItem ? deriveLibraryMoodTags(libraryItem) : null) ??

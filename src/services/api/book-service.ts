@@ -625,6 +625,18 @@ export async function enrichOpenLibraryWorks(
  * Reliable title searches for Explore bootstrap when trending feeds fail.
  * Ensures classics like Norwegian Wood come from Open Library, not mock.
  */
+/** Open Library subjects used to expand Explore coverage. */
+export const BOOK_DISCOVERY_SUBJECTS = [
+  "classics",
+  "contemporary fiction",
+  "literary fiction",
+  "literature",
+  "romance",
+  "mystery",
+  "memoir",
+  "philosophy",
+] as const;
+
 export async function getExploreBootstrapBooks(
   limitPerQuery = 4,
 ): Promise<Work[]> {
@@ -637,14 +649,20 @@ export async function getExploreBootstrapBooks(
     "subject:literary fiction",
   ];
 
+  const subjectBatches = await Promise.all(
+    BOOK_DISCOVERY_SUBJECTS.map((subject) =>
+      getBooksByCategory(subject, 8).catch(() => [] as Work[]),
+    ),
+  );
+
   const batches = await Promise.all(
     queries.map((query) => searchBooks(query, limitPerQuery)),
   );
   const byId = new Map<string, Work>();
-  for (const work of batches.flat()) {
+  for (const work of [...batches.flat(), ...subjectBatches.flat()]) {
     if (!byId.has(work.id)) byId.set(work.id, work);
   }
-  return enrichOpenLibraryWorks(Array.from(byId.values()), 20);
+  return enrichOpenLibraryWorks(Array.from(byId.values()), 28);
 }
 
 /**

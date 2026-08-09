@@ -5,12 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { LibraryArchiveCover } from "@/components/library/library-archive-cover";
 import { deriveLibraryMoodTags } from "@/components/library/library-visual-utils";
-import { WorkAiInsightSection } from "@/components/work/work-ai-insight-section";
 import { WorkCommunitySection } from "@/components/work/work-community-section";
-import {
-  WorkEnrichmentSections,
-  WorkSimilarWorksSection,
-} from "@/components/work/work-enrichment-sections";
+import { WorkEnrichmentSections } from "@/components/work/work-enrichment-sections";
 import { WorkYourJourneySection } from "@/components/work/work-your-journey-section";
 import { WorkStatusActions } from "@/components/work-status-actions";
 import { useJournalEntries } from "@/lib/calendar/journal-store";
@@ -133,9 +129,9 @@ export function WorkDetailPage({ id: rawId }: WorkDetailPageProps) {
     // eslint-disable-next-line no-console
     console.log("WORK ENRICHMENT", {
       summary: enrichment.summary,
+      whatToExpect: enrichment.whatToExpect,
+      guide: enrichment.guide,
       themes: enrichment.themes,
-      moodProfile: enrichment.moodProfile,
-      similarWorks: enrichment.similarWorks,
     });
   }, [enrichment]);
 
@@ -226,27 +222,16 @@ export function WorkDetailPage({ id: rawId }: WorkDetailPageProps) {
           </div>
         </section>
 
-        {/* ── About → Themes → Mood ────────────────────────── */}
+        {/* ── About → What to expect → Themes → Guide ──────── */}
         {enrichment ? (
-          <WorkEnrichmentSections enrichment={enrichment} />
+          <WorkEnrichmentSections
+            enrichment={enrichment}
+            description={work?.description}
+          />
         ) : null}
 
-        {/* ── Community ────────────────────────────────────── */}
+        {/* ── Community rating ─────────────────────────────── */}
         <WorkCommunitySection ratings={communityRatings} />
-
-        {/* ── Why AI recommends this ───────────────────────── */}
-        <WorkAiInsightSection
-          preview={
-            work?.aiInsights?.summary?.trim() ||
-            enrichment?.summary?.trim() ||
-            "A personal reading of why this work sits close to your taste — coming when Muse AI is connected."
-          }
-        />
-
-        {/* ── Similar works ────────────────────────────────── */}
-        {enrichment ? (
-          <WorkSimilarWorksSection enrichment={enrichment} />
-        ) : null}
 
         {/* ── My Journey ───────────────────────────────────── */}
         <WorkYourJourneySection

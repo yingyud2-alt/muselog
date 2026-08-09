@@ -6,10 +6,13 @@ import {
   openWorkDetail,
   type WorkPreviewSnapshot,
 } from "@/lib/detail/detail-overlay-store";
+import { cleanDescription } from "@/lib/work/clean-description";
+import { isApiBackedSource } from "@/lib/work/content-layers";
 import {
-  findImportedWorkByTitle,
-  getImportedWorkById,
-} from "@/lib/work/imported-work-catalog";
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+  toCanonicalWorkLog,
+} from "@/lib/work/resolve-canonical-work";
 
 function categoryToContentType(
   category: ExploreDiscoveryItem["category"],
@@ -48,26 +51,28 @@ function debugExploreOpen(payload: {
   });
 }
 
-/** Resolve imported Work: id → identity → title (creator language mismatch). */
-function resolveImportedWork(
-  id: string,
-  title: string,
-): ReturnType<typeof getImportedWorkById> {
-  return (
-    getImportedWorkById(id) ?? findImportedWorkByTitle(title)
-  );
-}
-
 /** Open Work Detail from a catalog Content card. */
 export function openExploreContent(content: Content) {
-  const imported = resolveImportedWork(content.id, content.title);
-  const coverUrl = imported?.coverUrl || content.cover;
-  const description = imported?.description?.trim()
-    ? imported.description
-    : content.description;
+  const imported = resolveCanonicalWork({
+    workId: content.id,
+    title: content.title,
+    creator: content.creator,
+    type: content.type,
+  });
+  const workId =
+    imported && isApiBackedSource(imported.source) ? imported.id : content.id;
+  const coverUrl = resolveCanonicalCoverUrl({
+    workId,
+    title: content.title,
+    creator: content.creator,
+    type: content.type,
+    catalogCover: content.cover,
+  });
+  const description = cleanDescription(
+    imported?.description || content.description,
+  );
   const source = imported?.source ?? content.source;
   const externalId = imported?.externalId;
-  const workId = imported?.id ?? content.id;
 
   debugExploreOpen({
     id: workId,
@@ -76,6 +81,16 @@ export function openExploreContent(content: Content) {
     description,
     externalId,
   });
+  // eslint-disable-next-line no-console
+  console.info(
+    "[canonical-work:explore]",
+    toCanonicalWorkLog("explore", content.id, {
+      workId: content.id,
+      title: content.title,
+      creator: content.creator,
+      type: content.type,
+    }),
+  );
 
   openExploreWorkDetail(workId, {
     title: imported?.title ?? content.title,
@@ -90,12 +105,25 @@ export function openExploreContent(content: Content) {
 /** Open Work Detail from a discovery carousel item (Trending / Category). */
 export function openExploreDiscoveryItem(item: ExploreDiscoveryItem) {
   const workId = item.contentId ?? item.id;
-  const resolved = resolveImportedWork(workId, item.title);
-  const resolvedId = resolved?.id ?? workId;
-  const coverUrl = resolved?.coverUrl || item.coverUrl || item.cover;
-  const description = resolved?.description?.trim()
-    ? resolved.description
-    : item.reason;
+  const resolved = resolveCanonicalWork({
+    workId,
+    title: item.title,
+    creator: item.creator,
+    type: categoryToContentType(item.category),
+  });
+  const resolvedId =
+    resolved && isApiBackedSource(resolved.source) ? resolved.id : workId;
+  const coverUrl = resolveCanonicalCoverUrl({
+    workId: resolvedId,
+    title: item.title,
+    creator: item.creator,
+    type: categoryToContentType(item.category),
+    libraryCover: item.coverUrl,
+    catalogCover: item.cover,
+  });
+  const description = cleanDescription(
+    resolved?.description || item.reason,
+  );
 
   debugExploreOpen({
     id: resolvedId,
@@ -104,6 +132,16 @@ export function openExploreDiscoveryItem(item: ExploreDiscoveryItem) {
     description,
     externalId: resolved?.externalId,
   });
+  // eslint-disable-next-line no-console
+  console.info(
+    "[canonical-work:explore]",
+    toCanonicalWorkLog("explore", workId, {
+      workId,
+      title: item.title,
+      creator: item.creator,
+      type: categoryToContentType(item.category),
+    }),
+  );
 
   openExploreWorkDetail(resolvedId, {
     title: resolved?.title ?? item.title,

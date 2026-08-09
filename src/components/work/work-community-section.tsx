@@ -22,6 +22,8 @@ function sourceLabel(source: string): string {
   if (key === "imdb") return "IMDb";
   if (key === "letterboxd") return "Letterboxd";
   if (key === "open_library") return "Open Library";
+  if (key === "tmdb") return "TMDB";
+  if (key === "lastfm" || key === "last.fm") return "Last.fm";
   if (!source) return "Community";
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
@@ -41,7 +43,7 @@ export function WorkCommunitySection({ ratings }: WorkCommunitySectionProps) {
   return (
     <section className="mt-20 border-t border-white/[0.05] pt-14 md:mt-28 md:pt-16">
       <h2 className="font-display text-[24px] font-medium tracking-tight text-white/90 md:text-[26px]">
-        Community
+        Community rating
       </h2>
 
       {!list?.length ? (

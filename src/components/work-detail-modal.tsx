@@ -21,14 +21,19 @@ import {
 } from "@/lib/detail/detail-overlay-store";
 import { useLibraryItems } from "@/lib/library/use-library-items";
 import { navigateToWorkDetail } from "@/lib/navigation/navigate-to-work";
-import { resolveCoverUrl } from "@/lib/work/cover-url";
+import { cleanDescription } from "@/lib/work/clean-description";
 import {
-  findImportedWorkByTitle,
   getImportedWorkById,
   useImportedWorkMap,
 } from "@/lib/work/imported-work-catalog";
+import {
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+  toCanonicalWorkLog,
+} from "@/lib/work/resolve-canonical-work";
 import { toContentType } from "@/lib/work/work-adapters";
 import { resolveWorkRouteId } from "@/lib/work/work-route";
+import type { ExternalRating, Work } from "@/types/work";
 
 type WorkDetailModalProps = {
   workId: string | null;
@@ -38,6 +43,74 @@ type WorkDetailModalProps = {
   lockScroll?: boolean;
   zIndex?: number;
 };
+
+function formatReleaseYear(releaseDate: string | undefined): string | null {
+  const raw = releaseDate?.trim();
+  if (!raw) return null;
+  const year = raw.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : raw;
+}
+
+function formatProviderLabel(source: string | undefined): string | null {
+  const key = source?.trim().toLowerCase();
+  if (!key) return null;
+  if (key === "open_library") return "Open Library";
+  if (key === "tmdb") return "TMDB";
+  if (key === "spotify") return "Spotify";
+  if (key === "google_books") return "Google Books";
+  if (key === "douban") return "Douban";
+  if (key === "manual") return null;
+  return source!.charAt(0).toUpperCase() + source!.slice(1);
+}
+
+function formatExternalRating(rating: ExternalRating | undefined): string | null {
+  if (!rating) return null;
+  if (!Number.isFinite(rating.value) || !Number.isFinite(rating.scale)) {
+    return null;
+  }
+  if (rating.scale <= 0) return null;
+  const value =
+    Number.isInteger(rating.value) && rating.scale >= 10
+      ? rating.value.toFixed(1)
+      : Number.isInteger(rating.value)
+        ? String(rating.value)
+        : String(Math.round(rating.value * 10) / 10);
+  return `${value}/${rating.scale}`;
+}
+
+function readPositiveInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  }
+  return null;
+}
+
+/** Compact metadata chips from existing Work fields — omit empties. */
+function buildWorkMetadataParts(work: Work | null | undefined): string[] {
+  if (!work) return [];
+
+  const parts: string[] = [];
+  const year = formatReleaseYear(work.releaseDate);
+  if (year) parts.push(year);
+
+  const provider = formatProviderLabel(work.source);
+  if (provider) parts.push(provider);
+
+  const rating = formatExternalRating(work.externalRatings?.[0]);
+  if (rating) parts.push(rating);
+
+  const pages = readPositiveInt(work.metadata?.pages);
+  if (pages != null) parts.push(`${pages} pages`);
+
+  const runtime = readPositiveInt(work.metadata?.runtime);
+  if (runtime != null) parts.push(`${runtime} min`);
+
+  return parts;
+}
 
 function CatalogDetailBody({
   workId,
@@ -49,16 +122,18 @@ function CatalogDetailBody({
 }) {
   const router = useRouter();
   const importedMap = useImportedWorkMap();
-  // Prefer imported Open Library Work over mock CONTENT_CATALOG.
-  // Title fallback covers creator localization (Murakami vs 村上春樹).
+  // Canonical API Work first; legacy catalog only as fallback.
   const catalogHint =
     getContentById(workId) ?? getContentByMediaKey(workId) ?? null;
   const imported =
+    resolveCanonicalWork({
+      workId,
+      title: catalogHint?.title ?? snapshot?.title,
+      creator: catalogHint?.creator ?? snapshot?.creator,
+      type: catalogHint?.type ?? snapshot?.type,
+    }) ??
     importedMap[workId] ??
-    getImportedWorkById(workId) ??
-    findImportedWorkByTitle(
-      catalogHint?.title ?? snapshot?.title ?? "",
-    );
+    getImportedWorkById(workId);
   const content = catalogHint;
 
   const title =
@@ -71,23 +146,25 @@ function CatalogDetailBody({
     snapshot?.type ??
     "BOOK";
   // Same resolver as Library / full detail — prefer Work.coverUrl over gradients.
-  const cover = resolveCoverUrl(
-    imported?.coverUrl,
-    snapshot?.cover,
-    content?.cover,
+  const cover = resolveCanonicalCoverUrl({
+    workId,
+    title: title ?? undefined,
+    creator,
+    type,
+    libraryCover: snapshot?.cover,
+    catalogCover: content?.cover,
+  });
+  const description = cleanDescription(
+    imported?.description ||
+      snapshot?.description ||
+      content?.description,
   );
-  const description =
-    (imported?.description?.trim()
-      ? imported.description
-      : undefined) ??
-    snapshot?.description ??
-    content?.description ??
-    "A quiet work waiting in your cultural orbit.";
   const tags =
     imported?.genres?.slice(0, 4) ??
     content?.tags?.slice(0, 4) ??
     snapshot?.tags?.slice(0, 4) ??
     [];
+  const metadataParts = buildWorkMetadataParts(imported);
 
   if (!title) {
     return (
@@ -126,6 +203,12 @@ function CatalogDetailBody({
           </span>
           {creator}
         </p>
+
+        {metadataParts.length > 0 ? (
+          <p className="mt-2 text-[12px] leading-relaxed tracking-[0.02em] text-white/36">
+            {metadataParts.join(" · ")}
+          </p>
+        ) : null}
 
         <LibraryMoodTags tags={tags} className="mt-4" />
 
@@ -208,25 +291,47 @@ export function WorkDetailModal({
   }, [allItems, getItemByKey, resolvedId]);
 
   const imported = resolvedId
-    ? (importedMap[resolvedId] ?? getImportedWorkById(resolvedId))
+    ? resolveCanonicalWork({
+        workId: resolvedId,
+        title: libraryItem?.title ?? snapshot?.title,
+        creator: libraryItem?.creator ?? snapshot?.creator,
+        type: libraryItem?.type ?? snapshot?.type,
+      }) ??
+      importedMap[resolvedId] ??
+      getImportedWorkById(resolvedId)
     : null;
   const catalog = resolvedId
     ? (getContentById(resolvedId) ?? getContentByMediaKey(resolvedId))
     : null;
 
   // Explore often opens a library row that still has a gradient placeholder.
-  // Overlay Open Library coverUrl / search snapshot before rendering.
+  // Overlay canonical API coverUrl / search snapshot before rendering.
   const libraryItemWithCover = useMemo(() => {
     if (!libraryItem) return null;
-    const cover = resolveCoverUrl(
-      imported?.coverUrl,
-      snapshot?.cover,
-      libraryItem.cover,
-      catalog?.cover,
-    );
+    const cover = resolveCanonicalCoverUrl({
+      workId: resolvedId,
+      title: libraryItem.title,
+      creator: libraryItem.creator,
+      type: libraryItem.type,
+      libraryCover: libraryItem.cover,
+      journalCover: snapshot?.cover,
+      catalogCover: catalog?.cover,
+    });
+    if (process.env.NODE_ENV !== "production" && resolvedId) {
+      // eslint-disable-next-line no-console
+      console.info(
+        "[canonical-work:work-detail]",
+        toCanonicalWorkLog("work-detail", resolvedId, {
+          workId: resolvedId,
+          title: libraryItem.title,
+          creator: libraryItem.creator,
+          type: libraryItem.type,
+        }),
+      );
+    }
     if (cover === libraryItem.cover) return libraryItem;
     return { ...libraryItem, cover };
-  }, [catalog?.cover, imported?.coverUrl, libraryItem, snapshot?.cover]);
+  }, [catalog?.cover, libraryItem, resolvedId, snapshot?.cover]);
 
   const title =
     libraryItemWithCover?.title ??

@@ -87,7 +87,7 @@ export function DesktopLibrary() {
     statusFilter,
     sort: "recently-updated",
   });
-  const recommendations = useMuseRecommendations(6);
+  const { recommendations } = useMuseRecommendations(6);
 
   const isFiltering =
     query.trim().length > 0 || typeFilter !== "all" || statusFilter !== "all";

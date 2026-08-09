@@ -11,6 +11,7 @@ import {
   PALETTE,
   TEXT_COLORS,
 } from "@/components/dashboard/mood-bubble-visual";
+import { useLanguage } from "@/components/i18n/language-provider";
 import {
   pickSurpriseRecommendation,
   type Recommendation,
@@ -275,7 +276,15 @@ function SurpriseMuseModal({
   );
 }
 
-export function SurpriseMuseButton() {
+type SurpriseMuseButtonProps = {
+  /** Optional: reshuffle homepage mood bubbles alongside Surprise refresh. */
+  onReshuffleBubbles?: () => void;
+};
+
+export function SurpriseMuseButton({
+  onReshuffleBubbles,
+}: SurpriseMuseButtonProps = {}) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(
     null,
@@ -283,17 +292,19 @@ export function SurpriseMuseButton() {
   const recommendationInput = useRecommendationInput();
 
   const reveal = useCallback(() => {
+    onReshuffleBubbles?.();
     setRecommendation((current) =>
       pickSurpriseRecommendation(recommendationInput, current?.id),
     );
     setOpen(true);
-  }, [recommendationInput]);
+  }, [onReshuffleBubbles, recommendationInput]);
 
   const refresh = useCallback(() => {
+    onReshuffleBubbles?.();
     setRecommendation((current) =>
       pickSurpriseRecommendation(recommendationInput, current?.id),
     );
-  }, [recommendationInput]);
+  }, [onReshuffleBubbles, recommendationInput]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -319,7 +330,7 @@ export function SurpriseMuseButton() {
           strokeWidth={1.75}
           aria-hidden="true"
         />
-        Surprise Muse
+        {t("hero.surpriseMuse")}
       </button>
 
       {open && recommendation && typeof document !== "undefined" && (

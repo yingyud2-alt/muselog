@@ -160,3 +160,85 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
 }
+
+/* Prefer a locally installed Zhuangjia Mincho when available. */
+@font-face {
+  font-family: "Zhuangjia Mincho";
+  src:
+    local("Zhuangjia Mincho"),
+    local("装甲明朝体"),
+    local("ZhuangJia Mincho"),
+    local("ZhuangJiaMincho");
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+}
+
+/*
+ * Chinese Home Hero title only.
+ * Class is inert under en-US so English Futura / sizes stay unchanged.
+ */
+html[lang="zh-CN"] .font-brand-hero {
+  font-family:
+    "Zhuangjia Mincho",
+    "装甲明朝体",
+    "Source Han Serif SC",
+    var(--font-noto-serif-sc),
+    "Noto Serif SC",
+    serif;
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  html[lang="zh-CN"] .font-brand-hero {
+    font-size: 48px;
+    line-height: 1.16;
+    letter-spacing: -0.025em;
+  }
+}
+
+@media (min-width: 1280px) {
+  html[lang="zh-CN"] .font-brand-hero {
+    font-size: 50px;
+  }
+}
+
+/* Desktop-only soft horizontal shift for the Chinese Hero text group. */
+html[lang="zh-CN"] .font-brand-hero-group {
+  transform: none;
+}
+
+@media (min-width: 768px) {
+  html[lang="zh-CN"] .font-brand-hero-group {
+    transform: translateX(40px);
+  }
+}
+
+/*
+ * Chinese Bubble body text (teaser / title).
+ * Inert under en-US — English bubbles keep font-display / Futura path.
+ */
+html[lang="zh-CN"] .font-bubble-zh-teaser {
+  font-family:
+    "Source Han Serif SC",
+    var(--font-noto-serif-sc),
+    "Noto Serif SC",
+    "Songti SC",
+    serif;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+html[lang="zh-CN"] .font-bubble-zh-title {
+  font-family:
+    "Source Han Serif SC",
+    var(--font-noto-serif-sc),
+    "Noto Serif SC",
+    "Songti SC",
+    serif;
+  font-weight: 500;
+  line-height: 1.3;
+}

@@ -24,7 +24,7 @@ export function applyJourneyRange(
   const end = normalizeCalendarDate(endDate);
   if (!start || !end) return item;
 
-  let nextStart = start;
+  const nextStart = start;
   let nextEnd = end;
   if (nextEnd < nextStart) {
     nextEnd = nextStart;

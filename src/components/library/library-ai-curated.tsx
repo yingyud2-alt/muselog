@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { useLanguage } from "@/components/i18n/language-provider";
 import { LibraryArchiveCover } from "@/components/library/library-archive-cover";
 import { formatRecommendationWhy } from "@/components/library/library-recommendation-utils";
 import { CONTENT_TYPE_LABELS } from "@/lib/content/constants";
@@ -23,6 +24,8 @@ export function LibraryAiCurated({
   onSelect,
   className,
 }: LibraryAiCuratedProps) {
+  const { t } = useLanguage();
+
   if (recommendations.length === 0) return null;
 
   return (
@@ -42,13 +45,13 @@ export function LibraryAiCurated({
             onClick={() => openRecommendationBatch(recommendations)}
             className="text-[13px] text-white/42 transition-colors hover:text-white/70"
           >
-            See More
+            {t("action.seeMore")}
           </button>
           <Link
             href="/explore"
             className="text-[13px] text-white/42 transition-colors hover:text-white/70"
           >
-            Explore more →
+            {t("nav.explore")} →
           </Link>
         </div>
       </div>

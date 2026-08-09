@@ -1,18 +1,46 @@
 import type { LucideIcon } from "lucide-react";
 import { Calendar, Compass, Home, Library, User } from "lucide-react";
 
+import type { NavSubtitleKey, NavTitleKey } from "@/lib/i18n";
+
 export type MobileNavItem = {
-  title: string;
+  titleKey: NavTitleKey;
+  subtitleKey: NavSubtitleKey;
   href: string;
   icon: LucideIcon;
 };
 
 export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
-  { title: "Home", href: "/", icon: Home },
-  { title: "Explore", href: "/explore", icon: Compass },
-  { title: "Journal", href: "/calendar", icon: Calendar },
-  { title: "Library", href: "/library", icon: Library },
-  { title: "Profile", href: "/profile", icon: User },
+  {
+    titleKey: "nav.home",
+    subtitleKey: "nav.homeEn",
+    href: "/",
+    icon: Home,
+  },
+  {
+    titleKey: "nav.explore",
+    subtitleKey: "nav.exploreEn",
+    href: "/explore",
+    icon: Compass,
+  },
+  {
+    titleKey: "nav.journal",
+    subtitleKey: "nav.journalEn",
+    href: "/calendar",
+    icon: Calendar,
+  },
+  {
+    titleKey: "nav.library",
+    subtitleKey: "nav.libraryEn",
+    href: "/library",
+    icon: Library,
+  },
+  {
+    titleKey: "nav.profile",
+    subtitleKey: "nav.profileEn",
+    href: "/profile",
+    icon: User,
+  },
 ];
 
 /** Bottom nav bar + floating margin (px). Used for page padding. */

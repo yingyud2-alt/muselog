@@ -15,8 +15,8 @@ import type { MediaItem } from "@/types/media";
 
 export function DesktopHomeSections() {
   const data = useDesktopDashboard();
-  const recommendations = useMuseRecommendations(5);
-  const batchRecommendations = useMuseRecommendations(10);
+  const { recommendations, isHydrated } = useMuseRecommendations(5);
+  const { recommendations: batchRecommendations } = useMuseRecommendations(10);
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [checkInOpen, setCheckInOpen] = useState(false);
 
@@ -36,6 +36,7 @@ export function DesktopHomeSections() {
         <MuseAiPicks
           recommendations={recommendations}
           batchRecommendations={batchRecommendations}
+          isHydrated={isHydrated}
         />
         <CulturalTimeline
           entries={data.timelineEntries}

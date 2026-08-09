@@ -1,13 +1,19 @@
 import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
-import { CONTENT_CATALOG, getContentById } from "@/lib/content/content-data";
+import { getContentById } from "@/lib/content/content-data";
 import type { Memory } from "@/lib/content/types";
 import type { UserMediaState } from "@/lib/content/user-media-state";
 import { buildLibraryItems } from "@/lib/library/library-items";
-import { resolveCoverUrl, isRemoteCoverUrl } from "@/lib/work/cover-url";
 import {
-  getImportedWorkById,
-  listImportedWorks,
-} from "@/lib/work/imported-work-catalog";
+  isRemoteCoverUrl,
+  withNormalizedCoverUrl,
+} from "@/lib/work/cover-url";
+import { isApiBackedSource } from "@/lib/work/content-layers";
+import { filterDisplayableApiWorks } from "@/lib/work/displayable-api-work";
+import { listImportedWorks } from "@/lib/work/imported-work-catalog";
+import {
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+} from "@/lib/work/resolve-canonical-work";
 import {
   contentToWork,
   libraryItemToWork,
@@ -25,11 +31,11 @@ import type { Work } from "@/types/work";
 /**
  * Local Work repository — single read model over existing stores.
  *
- * Public catalog priority: API imports > mock CONTENT_CATALOG fallback.
+ * Public catalog: displayable API imports only (Open Library / TMDB / Last.fm).
  * User Library (status/rating/journal) stays in buildWorks from user stores.
  */
 
-/** Public discovery Works: API imports first; mock only fills missing titles. */
+/** Public discovery Works — displayable API imports only. */
 export function listCatalogWorks(): Work[] {
   const byTitle = new Map<string, Work>();
 
@@ -42,19 +48,11 @@ export function listCatalogWorks(): Work[] {
     return score(candidate) >= score(existing) ? candidate : existing;
   };
 
-  // 1. API imports — primary public catalog (title key collapses EN/JA authors)
-  for (const work of listImportedWorks()) {
-    const key = workTitleIdentityKey(work.title) || workIdentityKey(work.title, work.creator);
+  for (const work of filterDisplayableApiWorks(listImportedWorks())) {
+    const key =
+      workTitleIdentityKey(work.title) ||
+      workIdentityKey(work.title, work.creator);
     byTitle.set(key, preferApi(work, byTitle.get(key)));
-  }
-
-  // 2. Mock catalog — only when no API twin exists for that title
-  for (const content of CONTENT_CATALOG) {
-    const work = contentToWork(content);
-    const key = workTitleIdentityKey(work.title) || workIdentityKey(work.title, work.creator);
-    if (!byTitle.has(key)) {
-      byTitle.set(key, work);
-    }
   }
 
   return Array.from(byTitle.values());
@@ -69,13 +67,25 @@ export function buildWorks(
 
   return libraryItems.map((item) => {
     const catalog = getContentByMediaKey(item.mediaKey);
-    const imported = getImportedWorkById(item.mediaKey);
+    const canonical = resolveCanonicalWork({
+      workId: item.mediaKey,
+      title: item.title,
+      creator: item.creator,
+      type: item.type,
+    });
     const base = libraryItemToWork(item);
+    const coverUrl = resolveCanonicalCoverUrl({
+      workId: item.mediaKey,
+      title: item.title,
+      creator: item.creator,
+      type: item.type,
+      libraryCover: base.coverUrl,
+      catalogCover: catalog?.cover,
+    });
 
-    if (imported) {
-      return mergeWorks(imported, {
-        // Keep user-library media key when it differs from API id
-        id: base.id,
+    if (canonical && isApiBackedSource(canonical.source)) {
+      return mergeWorks(canonical, {
+        id: canonical.id,
         userStatus: base.userStatus,
         userState: base.userStatus,
         rating: base.rating,
@@ -83,22 +93,22 @@ export function buildWorks(
         droppedReason: base.droppedReason,
         timeline: base.timeline,
         userNotes: base.userNotes,
-        description: base.description || imported.description,
-        coverUrl: resolveCoverUrl(imported.coverUrl, base.coverUrl),
-        source: imported.source,
-        externalId: imported.externalId,
-        metadata: imported.metadata,
+        description: base.description || canonical.description,
+        coverUrl,
+        source: canonical.source,
+        externalId: canonical.externalId,
+        metadata: canonical.metadata,
       });
     }
 
-    if (!catalog) return base;
+    if (!catalog) return withNormalizedCoverUrl({ ...base, coverUrl });
 
     return mergeWorks(contentToWork(catalog), {
       id: base.id,
       type: base.type,
       title: base.title,
       creator: base.creator,
-      coverUrl: base.coverUrl,
+      coverUrl,
       userStatus: base.userStatus,
       userState: base.userStatus,
       rating: base.rating,
@@ -125,22 +135,18 @@ export function getWorkById(
   const owned = works.find((work) => work.id === resolved);
   if (owned) return owned;
 
-  const imported = getImportedWorkById(resolved);
   const catalogEntry =
     getContentById(resolved) ?? getContentByMediaKey(resolved);
+  const canonical = resolveCanonicalWork({
+    workId: resolved,
+    title: catalogEntry?.title,
+    creator: catalogEntry?.creator,
+    type: catalogEntry?.type,
+  });
 
-  // API import wins entirely — never fall back to mock fields when present.
-  if (imported) {
-    if (!catalogEntry || imported.id === resolved) {
-      return imported;
-    }
-
-    // Request used a mock catalog id; keep that id for library key continuity
-    // while serving Open Library cover / description / metadata / ratings.
-    return {
-      ...imported,
-      id: resolved,
-    };
+  // API import wins — return canonical API id when available.
+  if (canonical && isApiBackedSource(canonical.source)) {
+    return withNormalizedCoverUrl(canonical);
   }
 
   if (catalogEntry) return contentToWork(catalogEntry);
@@ -149,7 +155,28 @@ export function getWorkById(
     const key = entry.id.replace(/^journal-/, "");
     return key === resolved || entry.id === resolved;
   });
-  if (journal) return mediaItemToWork(journal);
+  if (journal) {
+    const journalCanonical = resolveCanonicalWork({
+      workId: resolved,
+      title: journal.title,
+      creator: journal.creator,
+      type: journal.type,
+    });
+    if (journalCanonical && isApiBackedSource(journalCanonical.source)) {
+      return mergeWorks(journalCanonical, {
+        ...mediaItemToWork(journal),
+        id: journalCanonical.id,
+        coverUrl: resolveCanonicalCoverUrl({
+          workId: journalCanonical.id,
+          title: journal.title,
+          creator: journal.creator,
+          type: journal.type,
+          journalCover: journal.cover,
+        }),
+      });
+    }
+    return mediaItemToWork(journal);
+  }
 
   return null;
 }

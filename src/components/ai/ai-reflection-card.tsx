@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
+import { useLanguage } from "@/components/i18n/language-provider";
 import type {
   AiReflectionActivity,
   AiReflectionInput,
@@ -44,6 +45,7 @@ export function AiReflectionCard({
   ctaHref,
   ctaLabel,
 }: AiReflectionCardProps) {
+  const { t } = useLanguage();
   const input = useMemo<AiReflectionInput>(
     () => ({ userMedia, journalEntries, recentActivities }),
     [userMedia, journalEntries, recentActivities],
@@ -127,7 +129,7 @@ export function AiReflectionCard({
                 isCompact ? "text-sm" : "text-[15px]",
               )}
             >
-              AI Reflection
+              {t("page.aiReflection")}
             </h2>
             {!isCompact ? (
               <p className="font-display text-[12px] text-white/35">

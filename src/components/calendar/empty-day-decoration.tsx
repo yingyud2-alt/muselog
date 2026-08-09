@@ -6,7 +6,7 @@ type EmptyDayDecorationProps = {
   variant?: "desktop" | "mobile";
 };
 
-/** Adjacent-month filler — matches compact journal cell height. */
+/** Adjacent-month filler — quiet day number only. */
 export function EmptyDayDecoration({
   day,
   isCurrentMonth,
@@ -17,15 +17,16 @@ export function EmptyDayDecoration({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-[10px] border border-white/[0.04] bg-white/[0.015] px-1 pt-1",
-        isMobile ? "h-[56px]" : "h-[64px] md:h-[68px] md:rounded-[12px]",
+        "flex h-full flex-col bg-[#0C1016]/80 px-1.5 pt-1.5",
+        isMobile ? "min-h-[118px]" : "min-h-[148px] md:min-h-[158px]",
       )}
       aria-hidden="true"
     >
       <p
         className={cn(
-          "text-[11px] tabular-nums leading-none",
-          isCurrentMonth ? "text-white/38" : "text-white/15",
+          "tabular-nums leading-none",
+          isMobile ? "text-[11px]" : "text-[12px]",
+          isCurrentMonth ? "text-white/28" : "text-white/12",
         )}
       >
         {day}

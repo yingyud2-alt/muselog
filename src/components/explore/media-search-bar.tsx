@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
+import { useLanguage } from "@/components/i18n/language-provider";
 import { MediaSearchResults } from "@/components/explore/media-search-results";
 import { useMediaSearch } from "@/hooks/use-media-search";
 import { buildExploreSearchHref, persistSearchQuery } from "@/lib/content/search";
@@ -18,13 +19,15 @@ type MediaSearchBarProps = {
 
 export function MediaSearchBar({
   className,
-  placeholder = "Search books, movies, albums...",
+  placeholder,
   inputId = "media-search",
   variant = "explore",
 }: MediaSearchBarProps) {
   const router = useRouter();
   const { query, setQuery, results } = useMediaSearch();
   const [focused, setFocused] = useState(false);
+  const { t } = useLanguage();
+  const resolvedPlaceholder = placeholder ?? t("nav.search");
 
   const showResults =
     query.trim().length > 0 && (focused || variant === "explore");
@@ -37,7 +40,7 @@ export function MediaSearchBar({
   return (
     <div className={cn("relative", className)}>
       <label className="sr-only" htmlFor={inputId}>
-        Search media
+        {t("nav.search")}
       </label>
       <div
         className={cn(
@@ -74,7 +77,7 @@ export function MediaSearchBar({
             onBlur={() => {
               window.setTimeout(() => setFocused(false), 150);
             }}
-            placeholder={placeholder}
+            placeholder={resolvedPlaceholder}
             className={cn(
               "min-w-0 flex-1 bg-transparent text-white/82 placeholder:text-white/35 outline-none",
               variant === "home" ? "text-sm md:text-base" : "text-sm",
@@ -88,7 +91,7 @@ export function MediaSearchBar({
             onClick={handleExplore}
             className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 px-4 py-2 text-sm transition hover:bg-white/20"
           >
-            Explore
+            {t("nav.explore")}
             <span aria-hidden="true">→</span>
           </button>
         )}

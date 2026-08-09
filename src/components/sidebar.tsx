@@ -10,13 +10,15 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { cn } from "@/lib/utils";
-
+import { BrandLockup } from "@/components/i18n/brand-lockup";
+import { useLanguage } from "@/components/i18n/language-provider";
+import { NavLabel } from "@/components/i18n/nav-label";
 import {
   DESKTOP_NAV_ITEMS,
   isDesktopNavActive,
   type DesktopNavItem,
 } from "@/components/navigation/nav-items";
+import { cn } from "@/lib/utils";
 
 type NavItem = DesktopNavItem;
 
@@ -38,6 +40,7 @@ export function Sidebar() {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const wasOpenRef = useRef(false);
+  const { t } = useLanguage();
 
   const openDrawer = useCallback(() => {
     setIsOpen(true);
@@ -165,15 +168,13 @@ export function Sidebar() {
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/8 text-white/88">
                     <BookOpen className="size-4" aria-hidden="true" />
                   </div>
-                  <span className="font-display text-lg font-bold tracking-tight text-white/92">
-                    MuseLog
-                  </span>
+                  <BrandLockup className="text-white/92" />
                 </div>
 
                 <button
                   ref={closeRef}
                   type="button"
-                  aria-label="Close navigation"
+                  aria-label={t("action.close")}
                   onClick={closeDrawer}
                   className={cn(
                     "flex size-10 items-center justify-center rounded-xl text-white/58",
@@ -214,7 +215,12 @@ export function Sidebar() {
                         )}
                         aria-hidden="true"
                       />
-                      {item.title}
+                      <NavLabel
+                        titleKey={item.titleKey}
+                        subtitleKey={item.subtitleKey}
+                        variant="desktop"
+                        className="items-start"
+                      />
                     </Link>
                   );
                 })}

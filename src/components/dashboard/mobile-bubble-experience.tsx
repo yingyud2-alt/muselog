@@ -10,8 +10,9 @@ import {
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 
+import { useMoodBubbles } from "@/hooks/use-mood-bubbles";
 import { openBubblePreview } from "@/lib/work/open-bubble-preview";
-import { getWorkBubblesForContainer, type WorkBubble } from "./mood-bubble-data";
+import type { WorkBubble } from "./mood-bubble-data";
 import { MobileFeaturedBubbleContent } from "./mobile-bubble-content";
 import { BubbleMemoryIndicator } from "./bubble-memory-indicator";
 import {
@@ -297,15 +298,14 @@ export function MobileBubbleExperience() {
   const [mobileFocusedId, setMobileFocusedId] = useState<number | null>(null);
   const [gesturePhase, setGesturePhase] = useState<GesturePhase>("idle");
   const [offsets, setOffsets] = useState<Map<number, BubbleOffset>>(new Map());
+  const { bubbles } = useMoodBubbles(canvasSize.width);
 
   const isMobileFocusLocked = gesturePhase === "locked";
   const isDraggingFocus = gesturePhase === "dragging";
 
   const layout = useMemo(() => {
-    const works = getWorkBubblesForContainer(canvasSize.width);
-
-    return packMobileBubbles(works, canvasSize.width, canvasSize.height);
-  }, [canvasSize.height, canvasSize.width]);
+    return packMobileBubbles(bubbles, canvasSize.width, canvasSize.height);
+  }, [bubbles, canvasSize.height, canvasSize.width]);
 
   const bubbleBounds = useMemo(
     () => getMobileBubbleBounds(canvasSize.width, canvasSize.height),
@@ -415,6 +415,7 @@ export function MobileBubbleExperience() {
 
   const openWorkModal = useCallback(
     (work: WorkBubble) => {
+      if (!work.workId?.trim()) return;
       openBubblePreview(work);
       requestAnimationFrame(() => {
         clearMobileFocus();

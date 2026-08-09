@@ -74,7 +74,10 @@ function pickMoodFromTags(tags: string[]): BubbleMoodLabel {
 }
 
 export function getBubbleEmotionalMeta(
-  work: Pick<WorkBubble, "id" | "title" | "creator" | "type" | "tags" | "mood">,
+  work: Pick<
+    WorkBubble,
+    "id" | "title" | "creator" | "type" | "tags" | "mood" | "workId"
+  >,
 ): BubbleEmotionalMeta {
   const catalog = findCatalogContentForBubble(work as WorkBubble);
   const catalogTags = catalog?.tags ?? [];

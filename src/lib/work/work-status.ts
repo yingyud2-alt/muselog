@@ -8,6 +8,14 @@ import {
 } from "@/lib/content/user-media-state";
 import type { ContentType } from "@/lib/content/types";
 import { getDisplayTodayString } from "@/lib/habit/habit-utils";
+import {
+  isRemoteCoverUrl,
+  resolveCoverUrl,
+} from "@/lib/work/cover-url";
+import {
+  resolveCanonicalWork,
+  resolveCanonicalWorkId,
+} from "@/lib/work/resolve-canonical-work";
 import type { Work, WorkType, WorkUserStatus } from "@/types/work";
 
 export type WorkStatusIdentity = {
@@ -103,47 +111,64 @@ export function setWorkStatus(
   input: SetWorkStatusInput,
 ): UserMediaState {
   const mediaType = toMediaType(identity.type);
-  // Avoid persisting "" which would block later Open Library cover fallbacks.
-  const rawCover = (identity.coverUrl ?? identity.cover ?? "").trim();
-  const cover = rawCover || undefined;
+  const canonical = resolveCanonicalWork({
+    workId: identity.id,
+    title: identity.title,
+    creator: identity.creator,
+    type: identity.type,
+  });
+  const workId = resolveCanonicalWorkId({
+    workId: identity.id,
+    title: identity.title,
+    creator: identity.creator,
+    type: identity.type,
+  });
+  const title = canonical?.title ?? identity.title;
+  const creator = canonical?.creator ?? identity.creator;
+  const normalized = resolveCoverUrl(
+    canonical?.coverUrl,
+    identity.coverUrl,
+    identity.cover,
+  );
+  const cover = isRemoteCoverUrl(normalized) ? normalized : undefined;
   const endDate =
     input.endDate ??
     (input.status === "finished" ? getDisplayTodayString() : undefined);
 
   if (input.status === "want") {
-    const state = upsertUserMediaState(identity.id, {
+    const state = upsertUserMediaState(workId, {
       status: "WANT",
-      title: identity.title,
-      creator: identity.creator,
+      title,
+      creator,
       cover,
       mediaType,
       addedToJournal: false,
       shortReview: input.review,
     });
-    syncMemoryFromUserState(identity.id, state);
+    syncMemoryFromUserState(workId, state);
     return state;
   }
 
   if (input.status === "reading") {
-    const state = upsertUserMediaState(identity.id, {
+    const state = upsertUserMediaState(workId, {
       status: "ONGOING",
-      title: identity.title,
-      creator: identity.creator,
+      title,
+      creator,
       cover,
       mediaType,
       startDate: getDisplayTodayString(),
       addedToJournal: false,
     });
-    syncMemoryFromUserState(identity.id, state);
+    syncMemoryFromUserState(workId, state);
     return state;
   }
 
   if (input.status === "dropped") {
     const reason = input.droppedReason?.trim() || undefined;
-    const state = upsertUserMediaState(identity.id, {
+    const state = upsertUserMediaState(workId, {
       status: "DROPPED",
-      title: identity.title,
-      creator: identity.creator,
+      title,
+      creator,
       cover,
       mediaType,
       droppedReason: reason,
@@ -153,7 +178,7 @@ export function setWorkStatus(
       addedToJournal: false,
     });
     upsertMemory({
-      contentId: identity.id,
+      contentId: workId,
       status: "DROPPED",
       note: reason ?? input.review,
       rating: input.rating,
@@ -163,10 +188,10 @@ export function setWorkStatus(
 
   // finished
   const rating = input.rating && input.rating > 0 ? input.rating : undefined;
-  const state = upsertUserMediaState(identity.id, {
+  const state = upsertUserMediaState(workId, {
     status: "FINISHED",
-    title: identity.title,
-    creator: identity.creator,
+    title,
+    creator,
     cover,
     mediaType,
     rating,
@@ -174,7 +199,7 @@ export function setWorkStatus(
     endDate: endDate ?? getDisplayTodayString(),
     addedToJournal: false,
   });
-  syncMemoryFromUserState(identity.id, state);
+  syncMemoryFromUserState(workId, state);
   return state;
 }
 

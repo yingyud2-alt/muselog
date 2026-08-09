@@ -1,6 +1,7 @@
 "use client";
 
-import type { WorkEnrichment, WorkMoodProfile } from "@/types/work-enrichment";
+import { cleanDescription } from "@/lib/work/clean-description";
+import type { WorkEnrichment } from "@/types/work-enrichment";
 
 type WorkEnrichmentSectionsProps = {
   enrichment: WorkEnrichment;
@@ -9,51 +10,33 @@ type WorkEnrichmentSectionsProps = {
   includeSimilar?: boolean;
 };
 
-const MOOD_LABELS: Array<{ key: keyof WorkMoodProfile; label: string }> = [
-  { key: "quiet", label: "Quiet" },
-  { key: "nostalgic", label: "Nostalgic" },
-  { key: "melancholic", label: "Melancholic" },
-  { key: "hopeful", label: "Hopeful" },
-  { key: "intense", label: "Intense" },
-];
-
-function hasMoodProfile(profile: WorkMoodProfile | undefined): boolean {
-  if (!profile) return false;
-  return MOOD_LABELS.some(
-    ({ key }) =>
-      typeof profile[key] === "number" && Number.isFinite(profile[key]),
-  );
-}
-
-function clampDisplay(value: number): number {
-  return Math.max(0, Math.min(10, value));
-}
-
-/** Prefer short editorial themes over long catalog subjects. */
+/** Prefer short provider themes over long catalog subjects. */
 function compactThemes(themes: string[]): string[] {
-  const short = themes.filter((theme) => theme.trim().length <= 22);
+  const short = themes.filter((theme) => theme.trim().length <= 32);
   const list = short.length > 0 ? short : themes;
-  return list.slice(0, 6);
+  return list.slice(0, 8);
 }
 
 const sectionClass =
   "mt-20 border-t border-white/[0.05] pt-14 md:mt-28 md:pt-16";
 
 /**
- * About → Themes → Mood — editorial archive blocks.
+ * About → What to expect → Themes → Short guide
+ * Grounded in provider metadata only.
  */
 export function WorkEnrichmentSections({
   enrichment,
   description,
-  includeSimilar = false,
 }: WorkEnrichmentSectionsProps) {
-  const aboutText =
-    enrichment.summary?.trim() || description?.trim() || "";
+  const aboutText = cleanDescription(
+    enrichment.summary || description,
+  );
+  const whatToExpect = enrichment.whatToExpect?.trim();
+  const guide = enrichment.guide?.trim();
   const culturalContext = enrichment.culturalContext?.trim();
   const themes = compactThemes(
     enrichment.themes?.filter((theme) => theme.trim()) ?? [],
   );
-  const moodProfile = enrichment.moodProfile;
 
   return (
     <>
@@ -75,10 +58,21 @@ export function WorkEnrichmentSections({
         </section>
       ) : null}
 
+      {whatToExpect ? (
+        <section className={sectionClass}>
+          <h2 className="font-display text-[24px] font-medium tracking-tight text-white/90 md:text-[26px]">
+            What to expect
+          </h2>
+          <p className="mt-8 max-w-2xl text-[15px] leading-relaxed text-white/52">
+            {whatToExpect}
+          </p>
+        </section>
+      ) : null}
+
       {themes.length > 0 ? (
         <section className={sectionClass}>
           <h2 className="font-display text-[24px] font-medium tracking-tight text-white/90 md:text-[26px]">
-            Themes
+            Themes / genres
           </h2>
           <ul className="mt-8 flex flex-wrap gap-x-3 gap-y-2">
             {themes.map((theme) => (
@@ -93,48 +87,21 @@ export function WorkEnrichmentSections({
         </section>
       ) : null}
 
-      {hasMoodProfile(moodProfile) && moodProfile ? (
+      {guide ? (
         <section className={sectionClass}>
           <h2 className="font-display text-[24px] font-medium tracking-tight text-white/90 md:text-[26px]">
-            Mood profile
+            A short guide
           </h2>
-          <ul className="mt-10 max-w-md space-y-6">
-            {MOOD_LABELS.map(({ key, label }) => {
-              const value = moodProfile[key];
-              if (typeof value !== "number" || !Number.isFinite(value)) {
-                return null;
-              }
-              const score = clampDisplay(value);
-              const percent = Math.round((score / 10) * 100);
-              return (
-                <li key={key}>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-[13px] text-white/52">{label}</span>
-                    <span className="font-label text-[10px] tabular-nums tracking-[0.14em] text-white/26">
-                      {score}
-                    </span>
-                  </div>
-                  <div className="mt-2.5 h-px w-full bg-white/[0.07]">
-                    <div
-                      className="h-px bg-white/35"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <p className="mt-8 max-w-2xl text-[15px] leading-relaxed text-white/52">
+            {guide}
+          </p>
         </section>
-      ) : null}
-
-      {includeSimilar ? (
-        <WorkSimilarWorksSection enrichment={enrichment} />
       ) : null}
     </>
   );
 }
 
-/** Similar works — horizontal quiet cards. */
+/** Similar works — only when enrichment supplies catalog-backed entries. */
 export function WorkSimilarWorksSection({
   enrichment,
 }: {

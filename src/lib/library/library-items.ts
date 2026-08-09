@@ -21,8 +21,13 @@ import type {
   UserMediaState,
   UserMediaStatus,
 } from "@/lib/content/user-media-state";
-import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
-import { resolveCoverUrl } from "@/lib/work/cover-url";
+import { isApiBackedSource } from "@/lib/work/content-layers";
+import { isDisplayableApiWork } from "@/lib/work/displayable-api-work";
+import {
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+  resolveCanonicalWorkId,
+} from "@/lib/work/resolve-canonical-work";
 import type { MediaItem, MediaStatus } from "@/types/media";
 
 function memoryStatusToUser(status: Memory["status"]): UserMediaStatus {
@@ -83,64 +88,114 @@ export function buildLibraryItems(
     keys.add(key);
   }
 
-  const items: LibraryItem[] = [];
+  const byCanonical = new Map<string, LibraryItem>();
 
   for (const mediaKey of keys) {
     const stored = stateMap[mediaKey];
     const memory = memoryById.get(mediaKey);
-    const journal = journalByKey.get(mediaKey);
     const content = getContentByMediaKey(mediaKey);
     const userContent = getUserContentById(mediaKey);
-    const imported = getImportedWorkById(mediaKey);
-    const status = resolveStatus(stored, memory, journal);
 
-    if (status === "NONE") continue;
-
-    const type: LibraryMediaType =
-      content?.type ??
-      userContent?.type ??
-      stored?.mediaType ??
-      (imported
-        ? imported.type === "movie"
-          ? "MOVIE"
-          : imported.type === "music"
-            ? "MUSIC"
-            : "BOOK"
-        : undefined) ??
-      (journal?.type === "book"
-        ? "BOOK"
-        : journal?.type === "movie"
-          ? "MOVIE"
-          : "MUSIC");
-
-    const title =
+    const titleHint =
       content?.title ??
       userContent?.title ??
       stored?.title ??
-      imported?.title ??
+      journalByKey.get(mediaKey)?.title ??
+      "";
+    const creatorHint =
+      content?.creator ??
+      userContent?.creator ??
+      stored?.creator ??
+      journalByKey.get(mediaKey)?.creator ??
+      "";
+    const typeHint =
+      content?.type ??
+      userContent?.type ??
+      stored?.mediaType ??
+      (() => {
+        const journal = journalByKey.get(mediaKey);
+        if (!journal) return undefined;
+        return journal.type === "book"
+          ? "BOOK"
+          : journal.type === "movie"
+            ? "MOVIE"
+            : "MUSIC";
+      })();
+
+    const canonicalKey = resolveCanonicalWorkId({
+      workId: mediaKey,
+      title: titleHint,
+      creator: creatorHint,
+      type: typeHint,
+    });
+
+    const journal =
+      journalByKey.get(mediaKey) ?? journalByKey.get(canonicalKey);
+    const status = resolveStatus(stored, memory, journal);
+    if (status === "NONE") continue;
+
+    const canonical = resolveCanonicalWork({
+      workId: canonicalKey,
+      title: titleHint || journal?.title,
+      creator: creatorHint || journal?.creator,
+      type: typeHint,
+    });
+
+    // Live Library shows only real API-backed Works — keep user state stored.
+    if (!canonical || !isDisplayableApiWork(canonical)) {
+      continue;
+    }
+
+    const type: LibraryMediaType =
+      (canonical
+        ? canonical.type === "movie"
+          ? "MOVIE"
+          : canonical.type === "music"
+            ? "MUSIC"
+            : "BOOK"
+        : undefined) ??
+      typeHint ??
+      "BOOK";
+
+    const title =
+      (canonical && isApiBackedSource(canonical.source)
+        ? canonical.title
+        : undefined) ??
+      content?.title ??
+      userContent?.title ??
+      stored?.title ??
       journal?.title ??
       "Untitled";
 
     const creator =
+      (canonical && isApiBackedSource(canonical.source)
+        ? canonical.creator
+        : undefined) ??
       content?.creator ??
       userContent?.creator ??
       stored?.creator ??
-      imported?.creator ??
       journal?.creator ??
       "";
 
-    // Prefer Open Library / remote coverUrl over empty stored covers or gradients.
-    const cover = resolveCoverUrl(
-      stored?.cover,
-      imported?.coverUrl,
-      content?.cover,
-      userContent?.cover,
-      journal?.cover,
-    );
+    const cover = resolveCanonicalCoverUrl({
+      workId: canonicalKey,
+      title,
+      creator,
+      type,
+      libraryCover: stored?.cover ?? userContent?.cover,
+      journalCover: journal?.cover,
+      catalogCover: content?.cover,
+    });
 
-    items.push({
-      mediaKey,
-      contentId: content?.id ?? userContent?.id ?? (mediaKey.startsWith("bubble-") ? null : mediaKey),
+    const nextItem: LibraryItem = {
+      mediaKey: canonicalKey,
+      contentId:
+        (canonical && isApiBackedSource(canonical.source)
+          ? canonical.id
+          : null) ??
+        content?.id ??
+        userContent?.id ??
+        (mediaKey.startsWith("bubble-") ? null : mediaKey),
       title,
       creator,
       cover,
@@ -171,10 +226,42 @@ export function buildLibraryItems(
         memory?.updatedAt ??
         memory?.createdAt ??
         isoNow(),
+    };
+
+    const existing = byCanonical.get(canonicalKey);
+    if (!existing) {
+      byCanonical.set(canonicalKey, nextItem);
+      continue;
+    }
+
+    // Merge duplicate legacy + API rows for the same work.
+    byCanonical.set(canonicalKey, {
+      ...existing,
+      ...nextItem,
+      cover: resolveCanonicalCoverUrl({
+        workId: canonicalKey,
+        title: nextItem.title,
+        creator: nextItem.creator,
+        type: nextItem.type,
+        libraryCover: nextItem.cover,
+        journalCover: existing.cover,
+      }),
+      rating: nextItem.rating ?? existing.rating,
+      shortReview: nextItem.shortReview || existing.shortReview,
+      notes: nextItem.notes || existing.notes,
+      startDate: nextItem.startDate ?? existing.startDate,
+      endDate: nextItem.endDate ?? existing.endDate,
+      addedToJournal: existing.addedToJournal || nextItem.addedToJournal,
+      createdAt: existing.createdAt < nextItem.createdAt
+        ? existing.createdAt
+        : nextItem.createdAt,
+      updatedAt: existing.updatedAt > nextItem.updatedAt
+        ? existing.updatedAt
+        : nextItem.updatedAt,
     });
   }
 
-  return items;
+  return Array.from(byCanonical.values());
 }
 
 export function computeLibraryStats(items: LibraryItem[]): LibraryStats {

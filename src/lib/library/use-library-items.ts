@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import { useJournalEntries } from "@/lib/calendar/journal-store";
 import { getContentByMediaKey } from "@/lib/content/bubble-content-bridge";
@@ -17,13 +17,19 @@ import type {
   LibraryStatusFilter,
   LibraryTypeFilter,
 } from "@/lib/library/library-types";
-import { resolveCoverUrl } from "@/lib/work/cover-url";
-import { getImportedWorkById } from "@/lib/work/imported-work-catalog";
+import { migrateCanonicalWorkIds } from "@/lib/work/migrate-canonical-work-ids";
+import {
+  logCanonicalWorkVerification,
+  resolveCanonicalCoverUrl,
+  resolveCanonicalWork,
+} from "@/lib/work/resolve-canonical-work";
+import { useImportedWorkMap } from "@/lib/work/imported-work-catalog";
 import {
   contentToWork,
   libraryItemToWork,
   mergeWorks,
 } from "@/lib/work/work-adapters";
+import { isApiBackedSource } from "@/lib/work/content-layers";
 
 type UseLibraryItemsOptions = {
   query?: string;
@@ -47,29 +53,58 @@ export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
   const stateMap = useUserMediaStateMap();
   const { memories } = useAllMemories();
   const { entries: journalEntries } = useJournalEntries();
+  // Re-resolve covers when Explore persists API Works.
+  const importedMap = useImportedWorkMap();
+
+  useEffect(() => {
+    migrateCanonicalWorkIds();
+  }, [importedMap]);
 
   const allItems = useMemo(
     () => buildLibraryItems(stateMap, memories, journalEntries),
-    [stateMap, memories, journalEntries],
+    [stateMap, memories, journalEntries, importedMap],
   );
+
+  useEffect(() => {
+    logCanonicalWorkVerification(
+      "library",
+      allItems.map((item) => ({
+        storedWorkId: item.mediaKey,
+        title: item.title,
+        creator: item.creator,
+        type: item.type,
+      })),
+    );
+  }, [allItems]);
 
   const allWorks = useMemo(
     () =>
       allItems.map((item) => {
         const catalog = getContentByMediaKey(item.mediaKey);
-        const imported = getImportedWorkById(item.mediaKey);
+        const canonical = resolveCanonicalWork({
+          workId: item.mediaKey,
+          title: item.title,
+          creator: item.creator,
+          type: item.type,
+        });
         const fromLibrary = libraryItemToWork(item);
-        const coverUrl = resolveCoverUrl(
-          fromLibrary.coverUrl,
-          imported?.coverUrl,
-          catalog?.cover,
-        );
+        const coverUrl = resolveCanonicalCoverUrl({
+          workId: item.mediaKey,
+          title: item.title,
+          creator: item.creator,
+          type: item.type,
+          libraryCover: fromLibrary.coverUrl,
+          catalogCover: catalog?.cover,
+        });
 
-        if (imported) {
-          return mergeWorks(imported, {
+        if (canonical && isApiBackedSource(canonical.source)) {
+          return mergeWorks(canonical, {
             ...fromLibrary,
+            id: canonical.id,
             coverUrl,
-            description: fromLibrary.description || imported.description,
+            description: fromLibrary.description || canonical.description,
+            source: canonical.source,
+            externalId: canonical.externalId,
           });
         }
 
@@ -104,8 +139,13 @@ export function useLibraryItems(options: UseLibraryItemsOptions = {}) {
   }, [allItems, query, typeFilter, statusFilter, sort]);
 
   const getItemByKey = useCallback(
-    (mediaKey: string) =>
-      allItems.find((item) => item.mediaKey === mediaKey) ?? null,
+    (mediaKey: string) => {
+      const direct = allItems.find((item) => item.mediaKey === mediaKey);
+      if (direct) return direct;
+      const canonical = resolveCanonicalWork({ workId: mediaKey });
+      if (!canonical) return null;
+      return allItems.find((item) => item.mediaKey === canonical.id) ?? null;
+    },
     [allItems],
   );
 

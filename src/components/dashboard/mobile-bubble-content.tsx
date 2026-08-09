@@ -1,10 +1,28 @@
+"use client";
+
+import { useLanguage } from "@/components/i18n/language-provider";
+import { translateMoodLabel } from "@/lib/i18n/mood-label";
+import { useBubbleLocalizedDisplay } from "@/components/dashboard/use-bubble-localized-display";
 import type { WorkBubble } from "./mood-bubble-data";
 import { getBubbleEmotionalMeta } from "./bubble-emotional-meta";
 import { MediaIcon } from "./mood-bubble-shared";
 import { BUBBLE_TEXT_COLORS, TEXT_COLORS } from "./mood-bubble-visual";
 
 type MobileBubbleContentProps = {
-  work: Pick<WorkBubble, "type" | "quote" | "title" | "id" | "creator" | "tags" | "mood">;
+  work: Pick<
+    WorkBubble,
+    | "type"
+    | "quote"
+    | "title"
+    | "id"
+    | "creator"
+    | "tags"
+    | "mood"
+    | "workId"
+    | "localizedTitle"
+    | "localizedCreator"
+    | "localizedQuote"
+  >;
   diameter: number;
   variant: "featured" | "focus";
 };
@@ -20,6 +38,8 @@ export function MobileFeaturedBubbleContent({
   diameter,
   variant,
 }: MobileBubbleContentProps) {
+  const { t } = useLanguage();
+  const display = useBubbleLocalizedDisplay(work);
   const isFocus = variant === "focus";
   const boxRatio = isFocus ? 0.78 : 0.76;
   const boxWidth = diameter * boxRatio;
@@ -30,6 +50,7 @@ export function MobileFeaturedBubbleContent({
   const titleSize = isFocus ? 11 : scaleFont(diameter, 8, 10);
   const showIcon = isFocus || diameter >= 88;
   const meta = getBubbleEmotionalMeta(work);
+  const showLanguageToggle = display.canToggle && diameter >= 100;
 
   return (
     <div
@@ -59,12 +80,16 @@ export function MobileFeaturedBubbleContent({
           />
         )}
         <p
-          className="font-display mt-1 w-full"
+          className={
+            display.isZh
+              ? "font-bubble-zh-teaser mt-1 w-full"
+              : "font-display mt-1 w-full"
+          }
           style={{
             fontSize: quoteSize,
-            letterSpacing: "0.015em",
-            lineHeight: 1.36,
-            fontWeight: 700,
+            letterSpacing: display.isZh ? "0.01em" : "0.015em",
+            lineHeight: display.isZh ? 1.5 : 1.36,
+            fontWeight: display.isZh ? 400 : 700,
             color: isFocus
               ? BUBBLE_TEXT_COLORS.quoteFocused
               : BUBBLE_TEXT_COLORS.quote,
@@ -74,14 +99,22 @@ export function MobileFeaturedBubbleContent({
             wordBreak: "normal",
           }}
         >
-          &ldquo;{(work.quote?.trim() || work.title)}&rdquo;
+          {display.isZh ? (
+            display.teaser
+          ) : (
+            <>&ldquo;{display.teaser}&rdquo;</>
+          )}
         </p>
         <p
-          className="font-display mt-1.5 w-full"
+          className={
+            display.isZh
+              ? "font-bubble-zh-title mt-1.5 w-full"
+              : "font-display mt-1.5 w-full"
+          }
           style={{
             fontSize: titleSize,
             lineHeight: 1.3,
-            fontWeight: 400,
+            fontWeight: display.isZh ? 500 : 400,
             color: isFocus
               ? BUBBLE_TEXT_COLORS.titleFocused
               : BUBBLE_TEXT_COLORS.title,
@@ -91,9 +124,9 @@ export function MobileFeaturedBubbleContent({
             wordBreak: "normal",
           }}
         >
-          {work.title}
+          {display.title}
         </p>
-        {work.creator ? (
+        {display.creator ? (
           <p
             className="font-display mt-0.5 w-full truncate"
             style={{
@@ -104,7 +137,7 @@ export function MobileFeaturedBubbleContent({
               opacity: isFocus ? 0.7 : 0.55,
             }}
           >
-            {work.creator}
+            {display.creator}
           </p>
         ) : null}
         {diameter >= 92 && (
@@ -117,9 +150,33 @@ export function MobileFeaturedBubbleContent({
               opacity: 0.45,
             }}
           >
-            {meta.mood}
+            {translateMoodLabel(t, meta.mood)}
           </p>
         )}
+        {showLanguageToggle ? (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label={t(display.toggleLabelKey)}
+            className="pointer-events-auto mt-1 cursor-pointer font-label text-[8px] tracking-[0.08em] text-white/40"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              display.toggle();
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              event.stopPropagation();
+              display.toggle();
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            {t(display.toggleLabelKey)}
+          </span>
+        ) : null}
       </div>
     </div>
   );
